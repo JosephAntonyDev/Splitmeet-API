@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/user/app"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/user/domain/entities"
+	"github.com/gin-gonic/gin"
 )
 
 type CreateUserController struct {
@@ -18,6 +18,7 @@ func NewCreateUserController(useCase *app.CreateUser) *CreateUserController {
 }
 
 type createUserRequest struct {
+	Username string `json:"username" binding:"required,min=3"`
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
@@ -36,6 +37,7 @@ func (ctrl *CreateUserController) Handle(c *gin.Context) {
 
 	// 2. Mapear DTO -> Entidad de Dominio
 	user := entities.User{
+		Username: req.Username,
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
@@ -57,8 +59,9 @@ func (ctrl *CreateUserController) Handle(c *gin.Context) {
 
 	// 5. Respuesta Exitosa (201 Created)
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Usuario creado exitosamente",
-		"id":      user.ID, // El ID generado por la BD
-		"email":   user.Email,
+		"message":  "Usuario creado exitosamente",
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
 	})
 }

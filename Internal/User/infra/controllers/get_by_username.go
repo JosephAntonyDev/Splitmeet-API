@@ -2,30 +2,28 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/JosephAntonyDev/splitmeet-api/internal/user/app"
 	"github.com/gin-gonic/gin"
 )
 
-type GetUserController struct {
-	useCase *app.GetUser
+type GetByUsernameController struct {
+	useCase *app.GetByUsername
 }
 
-func NewGetUserController(useCase *app.GetUser) *GetUserController {
-	return &GetUserController{useCase: useCase}
+func NewGetByUsernameController(useCase *app.GetByUsername) *GetByUsernameController {
+	return &GetByUsernameController{useCase: useCase}
 }
 
-func (ctrl *GetUserController) Handle(c *gin.Context) {
-	idParam := c.Param("id")
+func (ctrl *GetByUsernameController) Handle(c *gin.Context) {
+	username := c.Param("username")
 
-	userID, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de usuario inválido"})
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username requerido"})
 		return
 	}
 
-	user, err := ctrl.useCase.Execute(userID)
+	user, err := ctrl.useCase.Execute(username)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Usuario no encontrado"})
 		return

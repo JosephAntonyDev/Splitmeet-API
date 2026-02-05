@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/user/app"
+	"github.com/gin-gonic/gin"
 )
 
 type GetProfileController struct {
@@ -17,7 +17,7 @@ func NewGetProfileController(useCase *app.GetProfile) *GetProfileController {
 
 func (ctrl *GetProfileController) Handle(c *gin.Context) {
 	userIDInterface, exists := c.Get("userID")
-	
+
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "No autorizado: Token no procesado"})
 		return
@@ -42,6 +42,7 @@ func (ctrl *GetProfileController) Handle(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":         user.ID,
+		"username":   user.Username,
 		"name":       user.Name,
 		"email":      user.Email,
 		"phone":      user.Phone,

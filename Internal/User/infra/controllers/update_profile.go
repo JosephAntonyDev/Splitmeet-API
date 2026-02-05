@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/user/app"
+	"github.com/gin-gonic/gin"
 )
 
 type UpdateUserController struct {
@@ -18,7 +18,7 @@ func NewUpdateUserController(useCase *app.UpdateUser) *UpdateUserController {
 type updateUserRequest struct {
 	Name     string `json:"name"`
 	Phone    string `json:"phone"`
-	Password string `json:"password"` 
+	Password string `json:"password"`
 }
 
 func (ctrl *UpdateUserController) Handle(c *gin.Context) {
@@ -50,10 +50,11 @@ func (ctrl *UpdateUserController) Handle(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Perfil actualizado correctamente",
 		"user": gin.H{
-			"id":    updatedUser.ID,
-			"name":  updatedUser.Name,
-			"email": updatedUser.Email,
-			"phone": updatedUser.Phone,
+			"id":       updatedUser.ID,
+			"username": updatedUser.Username,
+			"name":     updatedUser.Name,
+			"email":    updatedUser.Email,
+			"phone":    updatedUser.Phone,
 		},
 	})
 }

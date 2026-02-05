@@ -28,8 +28,6 @@ type UpdateUserParams struct {
 }
 
 func (uc *UpdateUser) Execute(params UpdateUserParams) (*entities.User, error) {
-	// 1. Obtener el usuario actual de la BD
-	// Necesitamos esto para no borrar datos que el usuario NO quiso cambiar (ej: si solo manda el teléfono)
 	currentUser, err := uc.repo.GetByID(params.ID)
 	if err != nil {
 		return nil, fmt.Errorf("error al buscar usuario: %w", err)
@@ -37,8 +35,6 @@ func (uc *UpdateUser) Execute(params UpdateUserParams) (*entities.User, error) {
 	if currentUser == nil {
 		return nil, fmt.Errorf("usuario no encontrado")
 	}
-
-	// 2. Aplicar cambios SOLO si vienen datos (Lógica de PATCH)
 	
 	if params.Name != "" {
 		currentUser.Name = params.Name
@@ -48,7 +44,6 @@ func (uc *UpdateUser) Execute(params UpdateUserParams) (*entities.User, error) {
 		currentUser.Phone = params.Phone
 	}
 
-	// 3. Manejo especial de la Contraseña
 	if params.Password != "" {
 		hashedPassword, err := uc.bcrypt.HashPassword(params.Password)
 		if err != nil {
@@ -57,13 +52,11 @@ func (uc *UpdateUser) Execute(params UpdateUserParams) (*entities.User, error) {
 		currentUser.Password = hashedPassword
 	}
 
-	// 4. Guardar cambios en BD
 	err = uc.repo.Update(currentUser)
 	if err != nil {
 		return nil, fmt.Errorf("error al actualizar usuario: %w", err)
 	}
 
-	// 5. Limpiar password antes de devolver
 	currentUser.Password = ""
 	
 	return currentUser, nil
