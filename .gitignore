@@ -1,0 +1,28 @@
+# Binarios y compilados
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+/vendor/
+
+# Archivos de entorno y secretos ¿
+.env
+.env.local
+*.env
+
+# IDEs y Editores
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs y reportes
+*.log
+coverage.out
