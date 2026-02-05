@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"github.com/lib/pq"
 	"fmt"
 	"time"
 
@@ -129,4 +130,30 @@ func (r *UserPostgreSQLRepository) Delete(id int64) error {
 		return fmt.Errorf("error eliminando usuario: %v", err)
 	}
 	return nil
+}
+
+func (r *UserPostgreSQLRepository) GetUsersByIDs(ids []int64) ([]entities.User, error) {
+  
+    query := `
+        SELECT id, name, email, phone 
+        FROM users 
+        WHERE id = ANY($1)`
+
+    rows, err := r.conn.DB.Query(query, pq.Array(ids))
+    if err != nil {
+        return nil, fmt.Errorf("error buscando usuarios por lote: %v", err)
+    }
+    defer rows.Close()
+
+    var users []entities.User
+    
+    for rows.Next() {
+        var u entities.User
+        if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Phone); err != nil {
+            return nil, fmt.Errorf("error escaneando usuario: %v", err)
+        }
+        users = append(users, u)
+    }
+
+    return users, nil
 }

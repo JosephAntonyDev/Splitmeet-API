@@ -2,35 +2,47 @@ package adapters
 
 import (
 	"time"
+	"fmt"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type JWTManager struct {
 	SecretKey string
 }
 
-func (j *JWTManager) GenerateToken(userId int) (string, error) {
+func NewJWTManager(secretKey string) *JWTManager {
+	return &JWTManager{SecretKey: secretKey}
+}
+
+func (j *JWTManager) GenerateToken(userId int, email string, name string) (string, error) {
 	claims := jwt.MapClaims{
-		"userId": userId,
-		"exp":    time.Now().Add(time.Hour * 24).Unix(),
+		"user_id": userId,
+		"email":   email,
+		"name":    name,
+		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	
 	return token.SignedString([]byte(j.SecretKey))
 }
 
-func (j *JWTManager) ValidateToken(token string) (bool, map[string]interface{}, error) {
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+func (j *JWTManager) ValidateToken(tokenString string) (bool, map[string]interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(j.SecretKey), nil
 	})
-	if err != nil || !parsedToken.Valid {
+
+	if err != nil {
 		return false, nil, err
 	}
 
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok || !parsedToken.Valid {
-		return false, nil, nil
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return true, claims, nil
 	}
 
-	return true, claims, nil
+	return false, nil, fmt.Errorf("invalid token")
 }
