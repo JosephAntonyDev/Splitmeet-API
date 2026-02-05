@@ -26,3 +26,6 @@
 # Logs y reportes
 *.log
 coverage.out
+
+# Base de datos
+schema.sql

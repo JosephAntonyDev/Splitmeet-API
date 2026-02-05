@@ -27,6 +27,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getProfileUseCase := app.NewGetProfile(userRepo)
 	updateUserUseCase := app.NewUpdateUser(userRepo, bcryptService)
 	deleteUserUseCase := app.NewDeleteUser(userRepo)
+	searchUsersUseCase := app.NewSearchUsers(userRepo)
 
 	createUserController := controllers.NewCreateUserController(createUserUseCase)
 	loginUserController := controllers.NewLoginUserController(loginUserUseCase)
@@ -35,8 +36,9 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getProfileController := controllers.NewGetProfileController(getProfileUseCase)
 	updateUserController := controllers.NewUpdateUserController(updateUserUseCase)
 	deleteUserController := controllers.NewDeleteUserController(deleteUserUseCase)
+	searchUsersController := controllers.NewSearchUsersController(searchUsersUseCase)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 
-	routes.SetupUserRoutes(r, createUserController, loginUserController, getUserController, getByUsernameController, getProfileController, updateUserController, deleteUserController, jwtSecret)
+	routes.SetupUserRoutes(r, createUserController, loginUserController, getUserController, getByUsernameController, getProfileController, updateUserController, deleteUserController, searchUsersController, jwtSecret)
 }

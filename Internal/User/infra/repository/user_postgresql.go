@@ -178,3 +178,24 @@ func (r *UserPostgreSQLRepository) GetByUsername(username string) (*entities.Use
 	}
 	return &user, nil
 }
+
+func (r *UserPostgreSQLRepository) SearchByUsername(query string, limit int) ([]entities.User, error) {
+	sqlQuery := `SELECT id, username, name, email, phone FROM users WHERE username ILIKE $1 LIMIT $2`
+
+	rows, err := r.conn.DB.Query(sqlQuery, "%"+query+"%", limit)
+	if err != nil {
+		return nil, fmt.Errorf("error buscando usuarios: %v", err)
+	}
+	defer rows.Close()
+
+	var users []entities.User
+	for rows.Next() {
+		var u entities.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Name, &u.Email, &u.Phone); err != nil {
+			return nil, fmt.Errorf("error escaneando usuario: %v", err)
+		}
+		users = append(users, u)
+	}
+
+	return users, nil
+}
