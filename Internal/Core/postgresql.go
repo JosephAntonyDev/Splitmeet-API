@@ -10,13 +10,9 @@ import (
 
 type Conn_PostgreSQL struct {
 	DB *sql.DB
-    // Quitamos 'Err string'. Si falla, la función constructora devuelve error.
 }
 
-// Devuelve (*Conn_PostgreSQL, error) -> Patrón estándar de Go
 func GetDBPool() (*Conn_PostgreSQL, error) {
-    // Asumimos que godotenv.Load() ya se hizo en el main.go
-    // para no recargar el archivo en cada conexión.
 
 	dbURL := os.Getenv("DB_URL")
     if dbURL == "" {
@@ -28,16 +24,15 @@ func GetDBPool() (*Conn_PostgreSQL, error) {
 		return nil, fmt.Errorf("error al abrir la base de datos: %w", err)
 	}
 
-    // Configuración recomendada para producción
 	db.SetMaxOpenConns(10)
-    db.SetMaxIdleConns(5) // Mantener algunas libres listas para usar
+    db.SetMaxIdleConns(5)
 
 	if err := db.Ping(); err != nil {
-        db.Close() // Importante cerrar si el ping falla
+        db.Close()
 		return nil, fmt.Errorf("error al verificar la conexión (ping): %w", err)
 	}
 
-    fmt.Println("✅ Conexión a PostgreSQL exitosa")
+    fmt.Println("Conexión a PostgreSQL exitosa")
 	return &Conn_PostgreSQL{DB: db}, nil
 }
 
@@ -51,7 +46,6 @@ func (conn *Conn_PostgreSQL) Execute(query string, values ...interface{}) (sql.R
 	return result, nil
 }
 
-// Wrapper para Query (Select). AHORA DEVUELVE ERROR.
 func (conn *Conn_PostgreSQL) Query(query string, values ...interface{}) (*sql.Rows, error) {
 	rows, err := conn.DB.Query(query, values...)
 	if err != nil {

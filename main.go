@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/JosephAntonyDev/splitmeet-api/internal/core"
-	//userInfra "github.com/JosephAntonyDev/splitmeet-api/internal/User/infra"
+	userInfra "github.com/JosephAntonyDev/splitmeet-api/internal/user/infra"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	r.Use(core.SetupCORS())
 
 	// Inyectar Dependencias
-	//userInfra.SetupDependencies(r, dbPool)
+	userInfra.SetupDependencies(r, dbPool)
 
 	port := os.Getenv("PORT")
 	if port == "" {

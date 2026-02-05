@@ -3,8 +3,8 @@ package services
 import (
 	"os"
 
-	"github.com/JosephAntonyDev/splitmeet-api/internal/User/domain/ports"
-	adapters "github.com/JosephAntonyDev/splitmeet-api/internal/User/infra/adapters"
+	"github.com/JosephAntonyDev/splitmeet-api/internal/user/domain/ports"
+	adapters "github.com/JosephAntonyDev/splitmeet-api/internal/user/infra/adapters"
 )
 
 // Inicializar el servicio de BCrypt
