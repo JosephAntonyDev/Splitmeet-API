@@ -170,24 +170,24 @@ Splitmeet implementa una **arquitectura hexagonal** que separa claramente las re
            ▼
     ┌──────────────┐         ┌──────────────┐
     │   CATEGORY   │────────>│   PRODUCT    │
-    │  📦 PENDIENTE│         │  📦 PENDIENTE│
+    │   ✅ HECHO   │         │   ✅ HECHO   │
     └──────────────┘         └──────────────┘
            │                        │
            │    ┌──────────────┐    │
            └───>│    GROUP     │<───┘
-                │  📦 PENDIENTE│
+                │   ✅ HECHO   │
                 └──────┬───────┘
                        │
                        ▼
                 ┌──────────────┐
                 │   OUTING     │  ◄── Módulo central
-                │  📦 PENDIENTE│
+                │   ✅ HECHO   │
                 └──────┬───────┘
                        │
                        ▼
                 ┌──────────────┐
                 │   PAYMENT    │
-                │  📦 PENDIENTE│
+                │   ✅ HECHO   │
                 └──────────────┘
 ```
 
@@ -206,7 +206,7 @@ Funcionalidades:
 └── Eliminar cuenta
 ```
 
-#### 2. 🏷️ Category (Pendiente)
+#### 2. 🏷️ Category (Implementado)
 Categorías predefinidas para clasificar salidas.
 
 ```
@@ -223,7 +223,7 @@ Categorías iniciales:
 └── 📦 Otro
 ```
 
-#### 3. 📦 Product (Pendiente)
+#### 3. 📦 Product (Implementado)
 Catálogo de productos predefinidos y personalizados.
 
 ```
@@ -240,7 +240,7 @@ Características del producto:
 └── Precio (opcional en predefinidos)
 ```
 
-#### 4. 👥 Group (Pendiente)
+#### 4. 👥 Group (Implementado)
 Grupos de amigos para organizar salidas.
 
 ```
@@ -260,12 +260,12 @@ Estados de membresía:
 └── 🔴 Rechazado (rejected)
 ```
 
-#### 5. 🎉 Outing (Pendiente)
+#### 5. 🎉 Outing (Implementado)
 Módulo central para gestión de salidas/eventos.
 
 ```
 Funcionalidades:
-├── Crear salida
+├── Crear salida (con o sin grupo)
 ├── Listar mis salidas
 ├── Ver detalle de salida
 ├── Actualizar salida
@@ -284,23 +284,27 @@ Reglas de negocio:
 └── Cálculos automáticos al agregar items
 ```
 
-#### 6. 💳 Payment (Pendiente)
-Sistema de tracking de pagos.
+#### 6. 💳 Payment (Implementado)
+Sistema de tracking de pagos con validaciones.
 
 ```
 Funcionalidades:
-├── Ver estado de pagos de una salida
-├── Marcar como pagado
-├── Confirmar pago (por el creador)
-└── Historial de pagos
+├── Registrar pago (con validación de monto)
+├── Confirmar pago (por el organizador)
+├── Ver pagos de una salida
+├── Ver resumen de pagos
+└── Auto-cancelación de pagos pendientes
 
 Estados de pago:
 ├── 🟡 Pendiente (pending)
-└── 🟢 Pagado (paid)
+├── 🟢 Pagado (paid)
+└── 🔴 Cancelado (cancelled)
 
-Reglas:
-├── Al pagar todos → outing.is_editable = false
-└── Al pagar todos → outing.status = 'completed'
+Validaciones:
+├── No permite pagar más del saldo restante
+├── No permite pagar si no hay items
+├── Auto-cancela pagos pendientes cuando se alcanza el total
+└── Al pagar todos → outing.is_editable = false
 ```
 
 ---
@@ -323,7 +327,6 @@ Reglas:
                                  │ email       │
                                  │ phone       │
                                  │ password    │
-                                 │ avatar_color│
                                  └──────┬──────┘
                                         │
               ┌─────────────────────────┼─────────────────────────┐
@@ -336,9 +339,9 @@ Reglas:
       │ name        │          │ group_id     │          │ name        │
       │ description │          │ user_id      │          │ description │
       │ owner_id    │          │ status       │          │ category_id │
-      │ avatar_color│          │ invited_by   │          │ group_id    │
-      │ is_active   │          │ invited_at   │          │ creator_id  │
-      └─────────────┘          │ responded_at │          │ outing_date │
+      │ is_active   │          │ invited_by   │          │ group_id    │
+      └─────────────┘          │ invited_at   │          │ creator_id  │
+                               │ responded_at │          │ outing_date │
                                └──────────────┘          │ split_type  │
                                                          │ total_amount│
       ┌─────────────┐                                    │ status      │
@@ -347,20 +350,19 @@ Reglas:
       │ id          │◄───────────────────────────────────────────┤
       │ name        │                                            │
       │ icon        │                                            │
-      │ color       │          ┌────────────────────┐            │
-      │ is_active   │          │OUTING_PARTICIPANTS │            │
-      └──────┬──────┘          ├────────────────────┤            │
+      │ is_active   │          ┌────────────────────┐            │
+      └──────┬──────┘          │OUTING_PARTICIPANTS │            │
+             │                 ├────────────────────┤            │
              │                 │ id                 │◄───────────┤
-             │                 │ outing_id          │            │
-             ▼                 │ user_id            │            │
-      ┌─────────────┐          │ status             │            │
-      │  PRODUCTS   │          │ amount_owed        │            │
-      ├─────────────┤          │ custom_amount      │            │
-      │ id          │          │ joined_at          │            │
-      │ category_id │          └─────────┬──────────┘            │
-      │ name        │                    │                       │
+             ▼                 │ outing_id          │            │
+      ┌─────────────┐          │ user_id            │            │
+      │  PRODUCTS   │          │ status             │            │
+      ├─────────────┤          │ amount_owed        │            │
+      │ id          │          │ custom_amount      │            │
+      │ category_id │          │ joined_at          │            │
+      │ name        │          └─────────┬──────────┘            │
       │ presentation│                    │                       │
-      │ size        │                    ▼                       │
+      │ size        │                    │                       │
       │ default_price          ┌─────────────────┐               │
       │ is_predefined│         │  ITEM_SPLITS    │               │
       │ created_by  │          ├─────────────────┤               │
@@ -382,7 +384,7 @@ Reglas:
                                │ custom_presentation
                                │ quantity        │
                                │ unit_price      │
-                               │ subtotal        │  (calculado)
+                               │ subtotal        │  (GENERATED)
                                │ is_shared       │
                                └─────────────────┘
 
@@ -394,7 +396,7 @@ Reglas:
                                │ participant_id  │
                                │ amount          │
                                │ status          │
-                               │ paid_at         │
+                               │ paid_at         │  (fecha confirmación)
                                │ confirmed_by    │
                                │ notes           │
                                └─────────────────┘
@@ -416,7 +418,7 @@ outing_status: 'active' | 'completed' | 'cancelled'
 participant_status: 'pending' | 'confirmed' | 'declined'
 
 -- Estados de pago
-payment_status: 'pending' | 'paid'
+payment_status: 'pending' | 'paid' | 'cancelled'
 ```
 
 ---
@@ -665,29 +667,31 @@ Authorization: Bearer <JWT_TOKEN>
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `POST` | `/users` | Registrar usuario |
-| `POST` | `/users/login` | Iniciar sesión |
+| `POST` | `/users/login` | Iniciar sesión (con email) |
 | `GET` | `/users/profile` | Obtener mi perfil |
-| `PATCH` | `/users/profile` | Actualizar mi perfil |
-| `GET` | `/users/:id` | Obtener usuario por ID |
-| `GET` | `/users/username/:username` | Buscar por username |
-| `DELETE` | `/users/:id` | Eliminar usuario |
+| `PATCH` | `/users/update` | Actualizar mi perfil |
+| `GET` | `/users/get/:id` | Obtener usuario por ID |
+| `GET` | `/users/username/:username` | Buscar por username exacto |
+| `GET` | `/users/search?username=xxx` | Buscar usuarios (parcial) |
+| `GET` | `/users/invitations` | Ver invitaciones pendientes |
+| `DELETE` | `/users/delete` | Eliminar mi cuenta |
 
-#### 🏷️ Categories
+#### 🏷️ Categories (Implementado)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/categories` | Listar todas las categorías |
 | `GET` | `/categories/:id` | Obtener categoría por ID |
 
-#### 📦 Products
+#### 📦 Products (Implementado)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/products` | Listar productos (query: `category_id`, `search`) |
+| `GET` | `/products/category/:id` | Listar productos por categoría |
 | `GET` | `/products/:id` | Obtener producto por ID |
 | `POST` | `/products` | Crear producto personalizado |
 
-#### 👥 Groups
+#### 👥 Groups (Implementado)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -697,38 +701,42 @@ Authorization: Bearer <JWT_TOKEN>
 | `PATCH` | `/groups/:id` | Actualizar grupo |
 | `DELETE` | `/groups/:id` | Eliminar grupo |
 | `GET` | `/groups/:id/members` | Listar miembros |
-| `POST` | `/groups/:id/invite` | Invitar usuario |
-| `PATCH` | `/groups/:id/invitation` | Responder invitación |
+| `POST` | `/groups/:id/members` | Invitar usuario |
+| `PATCH` | `/groups/:id/members/respond` | Responder invitación (usa `{"status": "accepted"}`) |
 | `DELETE` | `/groups/:id/members/:userId` | Remover miembro |
 
-#### 🎉 Outings
+#### 🎉 Outings (Implementado)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `POST` | `/outings` | Crear salida |
-| `GET` | `/outings` | Listar mis salidas |
+| `GET` | `/outings/me` | Listar mis salidas |
 | `GET` | `/outings/:id` | Obtener detalle de salida |
+| `GET` | `/outings/group/:id` | Salidas de un grupo |
 | `PATCH` | `/outings/:id` | Actualizar salida |
 | `DELETE` | `/outings/:id` | Eliminar salida |
 | `GET` | `/outings/:id/participants` | Listar participantes |
 | `POST` | `/outings/:id/participants` | Agregar participante |
-| `PATCH` | `/outings/:id/participants/:userId/confirm` | Confirmar asistencia |
+| `PATCH` | `/outings/:id/participants/confirm` | Confirmar asistencia (usa `{"accept": true}`) |
 | `DELETE` | `/outings/:id/participants/:userId` | Remover participante |
 | `GET` | `/outings/:id/items` | Listar items |
 | `POST` | `/outings/:id/items` | Agregar item |
 | `PATCH` | `/outings/:id/items/:itemId` | Actualizar item |
 | `DELETE` | `/outings/:id/items/:itemId` | Eliminar item |
 | `POST` | `/outings/:id/items/:itemId/splits` | Dividir item |
-| `POST` | `/outings/:id/calculate` | Recalcular montos |
+| `GET` | `/outings/:id/items/:itemId/splits` | Ver división de item |
+| `GET` | `/outings/:id/calculate` | Calcular montos |
 
-#### 💳 Payments
+#### 💳 Payments (Implementado)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/outings/:id/payments` | Estado de pagos de una salida |
-| `PATCH` | `/payments/:id/pay` | Marcar como pagado |
+| `POST` | `/payments` | Registrar pago (validado) |
+| `GET` | `/payments/:id` | Obtener detalle de pago |
+| `GET` | `/payments/outing/:id` | Ver pagos de una salida |
+| `GET` | `/payments/outing/:id/summary` | Resumen de pagos |
 | `PATCH` | `/payments/:id/confirm` | Confirmar pago recibido |
-| `GET` | `/payments/my-pending` | Mis pagos pendientes |
+| `DELETE` | `/payments/:id` | Eliminar pago pendiente |
 
 ---
 
@@ -928,17 +936,17 @@ JWT_EXPIRATION_HOURS=24
 
 ## 🛠 Desarrollo
 
-### Orden de Implementación
+### Estado de Implementación
 
-Se recomienda implementar los módulos en este orden por dependencias:
+Todos los módulos están completamente implementados:
 
 ```
-1. ✅ User          (ya implementado)
-2. 🔄 Category      (sin dependencias)
-3. 🔄 Product       (depende de Category)
-4. 🔄 Group         (depende de User)
-5. 🔄 Outing        (depende de Category, Group, User)
-6. 🔄 Payment       (depende de Outing)
+1. ✅ User          (autenticación, perfil, búsqueda, invitaciones)
+2. ✅ Category      (listado de categorías predefinidas)
+3. ✅ Product       (catálogo por categoría)
+4. ✅ Group         (grupos con invitaciones)
+5. ✅ Outing        (salidas, participantes, items, splits)
+6. ✅ Payment       (pagos con validaciones y auto-cancelación)
 ```
 
 ### Convenciones de Código

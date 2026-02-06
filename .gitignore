@@ -29,3 +29,6 @@ coverage.out
 
 # Base de datos
 schema.sql
+
+# Documentación local (no subir)
+ENTITIES_DOCS.md
