@@ -21,4 +21,9 @@ type PaymentRepository interface {
 	// Validations
 	GetParticipantIDByOutingAndUser(outingID, userID int64) (int64, error)
 	IsParticipantInOuting(outingID, participantID int64) (bool, error)
+
+	// Outing totals
+	GetOutingTotalAmount(outingID int64) (float64, error)
+	GetTotalConfirmedPayments(outingID int64) (float64, error)
+	CancelPendingPayments(outingID int64) error
 }

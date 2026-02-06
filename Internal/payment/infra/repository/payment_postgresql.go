@@ -255,3 +255,26 @@ func (r *PaymentPostgresql) IsParticipantInOuting(outingID, participantID int64)
 	err := r.db.QueryRow(query, outingID, participantID).Scan(&exists)
 	return exists, err
 }
+
+func (r *PaymentPostgresql) GetOutingTotalAmount(outingID int64) (float64, error) {
+	query := `SELECT COALESCE(total_amount, 0) FROM outings WHERE id = $1`
+	var total float64
+	err := r.db.QueryRow(query, outingID).Scan(&total)
+	if err == sql.ErrNoRows {
+		return 0, errors.New("outing not found")
+	}
+	return total, err
+}
+
+func (r *PaymentPostgresql) GetTotalConfirmedPayments(outingID int64) (float64, error) {
+	query := `SELECT COALESCE(SUM(amount), 0) FROM payments WHERE outing_id = $1 AND status = 'paid'`
+	var total float64
+	err := r.db.QueryRow(query, outingID).Scan(&total)
+	return total, err
+}
+
+func (r *PaymentPostgresql) CancelPendingPayments(outingID int64) error {
+	query := `UPDATE payments SET status = 'cancelled', updated_at = NOW() WHERE outing_id = $1 AND status = 'pending'`
+	_, err := r.db.Exec(query, outingID)
+	return err
+}

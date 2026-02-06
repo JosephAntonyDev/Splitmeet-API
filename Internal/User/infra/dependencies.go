@@ -28,6 +28,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	updateUserUseCase := app.NewUpdateUser(userRepo, bcryptService)
 	deleteUserUseCase := app.NewDeleteUser(userRepo)
 	searchUsersUseCase := app.NewSearchUsers(userRepo)
+	getPendingInvitationsUseCase := app.NewGetPendingInvitations(dbPool.DB)
 
 	createUserController := controllers.NewCreateUserController(createUserUseCase)
 	loginUserController := controllers.NewLoginUserController(loginUserUseCase)
@@ -37,8 +38,9 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	updateUserController := controllers.NewUpdateUserController(updateUserUseCase)
 	deleteUserController := controllers.NewDeleteUserController(deleteUserUseCase)
 	searchUsersController := controllers.NewSearchUsersController(searchUsersUseCase)
+	getPendingInvitationsController := controllers.NewGetPendingInvitationsController(getPendingInvitationsUseCase)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 
-	routes.SetupUserRoutes(r, createUserController, loginUserController, getUserController, getByUsernameController, getProfileController, updateUserController, deleteUserController, searchUsersController, jwtSecret)
+	routes.SetupUserRoutes(r, createUserController, loginUserController, getUserController, getByUsernameController, getProfileController, updateUserController, deleteUserController, searchUsersController, getPendingInvitationsController, jwtSecret)
 }

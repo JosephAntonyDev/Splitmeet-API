@@ -29,6 +29,10 @@ func (uc *ConfirmPaymentUseCase) Execute(paymentID, confirmedByUserID int64) (*e
 		return nil, errors.New("payment already confirmed")
 	}
 
+	if payment.Status == entities.PaymentStatusCancelled {
+		return nil, errors.New("payment was cancelled")
+	}
+
 	now := time.Now()
 	payment.Status = entities.PaymentStatusPaid
 	payment.PaidAt = &now
@@ -37,6 +41,22 @@ func (uc *ConfirmPaymentUseCase) Execute(paymentID, confirmedByUserID int64) (*e
 
 	if err := uc.repo.Update(payment); err != nil {
 		return nil, err
+	}
+
+	// Verificar si el outing ya está completamente pagado
+	outingTotal, err := uc.repo.GetOutingTotalAmount(payment.OutingID)
+	if err != nil {
+		return payment, nil // El pago se confirmó, pero no pudimos verificar el total
+	}
+
+	confirmedPayments, err := uc.repo.GetTotalConfirmedPayments(payment.OutingID)
+	if err != nil {
+		return payment, nil
+	}
+
+	// Si el total ya fue alcanzado o superado, cancelar pagos pendientes
+	if confirmedPayments >= outingTotal {
+		uc.repo.CancelPendingPayments(payment.OutingID)
 	}
 
 	return payment, nil

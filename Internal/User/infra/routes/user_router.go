@@ -9,6 +9,7 @@ import (
 func SetupUserRoutes(r *gin.Engine, createUserCtrl *controllers.CreateUserController, loginUserCtrl *controllers.LoginUserController,
 	getUserCtrl *controllers.GetUserController, getByUsernameCtrl *controllers.GetByUsernameController, getProfileCtrl *controllers.GetProfileController, updateUserCtrl *controllers.UpdateUserController,
 	deleteUserCtrl *controllers.DeleteUserController, searchUsersCtrl *controllers.SearchUsersController,
+	getPendingInvitationsCtrl *controllers.GetPendingInvitationsController,
 	jwtSecret string) {
 	g := r.Group("users")
 	{
@@ -22,6 +23,7 @@ func SetupUserRoutes(r *gin.Engine, createUserCtrl *controllers.CreateUserContro
 		gPrivate.GET("/username/:username", getByUsernameCtrl.Handle)
 		gPrivate.GET("/search", searchUsersCtrl.Handle)
 		gPrivate.GET("/profile", getProfileCtrl.Handle)
+		gPrivate.GET("/invitations", getPendingInvitationsCtrl.Handle)
 		gPrivate.PATCH("/update", updateUserCtrl.Handle)
 		gPrivate.DELETE("/delete", deleteUserCtrl.Handle)
 	}

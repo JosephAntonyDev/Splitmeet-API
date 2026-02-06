@@ -5,8 +5,9 @@ import "time"
 type PaymentStatus string
 
 const (
-	PaymentStatusPending PaymentStatus = "pending"
-	PaymentStatusPaid    PaymentStatus = "paid"
+	PaymentStatusPending   PaymentStatus = "pending"
+	PaymentStatusPaid      PaymentStatus = "paid"
+	PaymentStatusCancelled PaymentStatus = "cancelled"
 )
 
 type Payment struct {
