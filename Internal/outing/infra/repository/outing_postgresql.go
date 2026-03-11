@@ -119,8 +119,9 @@ func (r *OutingPostgresql) GetByUserID(userID int64) ([]entities.OutingWithDetai
 		LEFT JOIN categories c ON o.category_id = c.id
 		LEFT JOIN groups g ON o.group_id = g.id
 		JOIN users u ON o.creator_id = u.id
-		LEFT JOIN outing_participants op ON o.id = op.outing_id
-		WHERE o.creator_id = $1 OR op.user_id = $1
+		LEFT JOIN outing_participants op ON o.id = op.outing_id AND op.user_id = $1
+		WHERE o.creator_id = $1 
+		   OR (op.user_id = $1 AND op.status != 'declined')
 		ORDER BY o.created_at DESC
 	`
 	rows, err := r.db.Query(query, userID)

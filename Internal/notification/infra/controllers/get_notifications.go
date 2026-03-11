@@ -40,15 +40,16 @@ func (ctrl *GetNotificationsController) Handle(c *gin.Context) {
 	var data []gin.H
 	for _, n := range notifications {
 		item := gin.H{
-			"id":           n.ID,
-			"type":         n.Type,
-			"title":        n.Title,
-			"message":      n.Message,
-			"inviter_name": n.InviterName,
-			"group_name":   n.GroupName,
-			"outing_name":  n.OutingName,
-			"is_read":      n.IsRead,
-			"created_at":   n.CreatedAt,
+			"id":              n.ID,
+			"type":            n.Type,
+			"title":           n.Title,
+			"message":         n.Message,
+			"inviter_name":    n.InviterName,
+			"group_name":      n.GroupName,
+			"outing_name":     n.OutingName,
+			"is_read":         n.IsRead,
+			"response_status": n.ResponseStatus,
+			"created_at":      n.CreatedAt,
 		}
 		if n.ReferenceID != nil {
 			item["reference_id"] = *n.ReferenceID

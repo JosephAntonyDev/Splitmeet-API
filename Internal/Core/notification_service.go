@@ -45,15 +45,16 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 
 	// Push SSE event to the user
 	s.hub.SendToUser(payload.UserID, "notification", map[string]interface{}{
-		"id":           id,
-		"type":         payload.Type,
-		"title":        payload.Title,
-		"message":      payload.Message,
-		"reference_id": payload.ReferenceID,
-		"inviter_name": payload.InviterName,
-		"group_name":   payload.GroupName,
-		"outing_name":  payload.OutingName,
-		"is_read":      false,
-		"created_at":   createdAt,
+		"id":              id,
+		"type":            payload.Type,
+		"title":           payload.Title,
+		"message":         payload.Message,
+		"reference_id":    payload.ReferenceID,
+		"inviter_name":    payload.InviterName,
+		"group_name":      payload.GroupName,
+		"outing_name":     payload.OutingName,
+		"is_read":         false,
+		"response_status": "pending",
+		"created_at":      createdAt,
 	})
 }

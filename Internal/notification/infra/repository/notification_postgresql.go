@@ -48,13 +48,35 @@ func (r *NotificationPostgreSQLRepository) GetByUserID(userID int64, limit, offs
 		return nil, 0, fmt.Errorf("error al contar notificaciones: %v", err)
 	}
 
+	// Query que une con outing_participants y group_members para obtener el response_status
 	query := `
-		SELECT id, user_id, type, title, message, reference_id, 
-			   COALESCE(inviter_name, ''), COALESCE(group_name, ''), COALESCE(outing_name, ''),
-			   is_read, created_at
-		FROM notifications
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT n.id, n.user_id, n.type, n.title, n.message, n.reference_id, 
+			   COALESCE(n.inviter_name, ''), COALESCE(n.group_name, ''), COALESCE(n.outing_name, ''),
+			   n.is_read, n.created_at,
+			   CASE 
+			       WHEN n.type = 'outing_invitation' THEN 
+			           COALESCE((SELECT 
+			               CASE op.status 
+			                   WHEN 'confirmed' THEN 'accepted'
+			                   WHEN 'declined' THEN 'rejected'
+			                   ELSE 'pending'
+			               END
+			           FROM outing_participants op 
+			           WHERE op.outing_id = n.reference_id AND op.user_id = n.user_id), 'pending')
+			       WHEN n.type = 'group_invitation' THEN 
+			           COALESCE((SELECT 
+			               CASE gm.status 
+			                   WHEN 'accepted' THEN 'accepted'
+			                   WHEN 'rejected' THEN 'rejected'
+			                   ELSE 'pending'
+			               END
+			           FROM group_members gm 
+			           WHERE gm.group_id = n.reference_id AND gm.user_id = n.user_id), 'pending')
+			       ELSE 'pending'
+			   END as response_status
+		FROM notifications n
+		WHERE n.user_id = $1
+		ORDER BY n.created_at DESC
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.conn.DB.Query(query, userID, limit, offset)
@@ -67,11 +89,12 @@ func (r *NotificationPostgreSQLRepository) GetByUserID(userID int64, limit, offs
 	for rows.Next() {
 		var n entities.Notification
 		var refID sql.NullInt64
+		var responseStatus string
 
 		err := rows.Scan(
 			&n.ID, &n.UserID, &n.Type, &n.Title, &n.Message, &refID,
 			&n.InviterName, &n.GroupName, &n.OutingName,
-			&n.IsRead, &n.CreatedAt,
+			&n.IsRead, &n.CreatedAt, &responseStatus,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("error al escanear notificación: %v", err)
@@ -79,6 +102,7 @@ func (r *NotificationPostgreSQLRepository) GetByUserID(userID int64, limit, offs
 		if refID.Valid {
 			n.ReferenceID = &refID.Int64
 		}
+		n.ResponseStatus = entities.ResponseStatus(responseStatus)
 		notifications = append(notifications, n)
 	}
 
