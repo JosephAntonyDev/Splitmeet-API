@@ -4,19 +4,23 @@ import (
 	"os"
 
 	"github.com/JosephAntonyDev/splitmeet-api/internal/core"
+	groupRepository "github.com/JosephAntonyDev/splitmeet-api/internal/group/infra/repository"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/outing/app"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/outing/infra/controllers"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/outing/infra/repository"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/outing/infra/routes"
+	userRepository "github.com/JosephAntonyDev/splitmeet-api/internal/user/infra/repository"
 	"github.com/gin-gonic/gin"
 )
 
-func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
-	// Repository
+func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *core.NotificationService) {
+	// Repositories
 	outingRepo := repository.NewOutingPostgresql(dbPool.DB)
+	groupRepo := groupRepository.NewGroupPostgreSQLRepository(dbPool)
+	userRepo := userRepository.NewUserPostgreSQLRepository(dbPool)
 
 	// Use Cases - Outings
-	createOutingUC := app.NewCreateOutingUseCase(outingRepo)
+	createOutingUC := app.NewCreateOutingUseCase(outingRepo, groupRepo, userRepo, notifSvc)
 	getOutingUC := app.NewGetOutingUseCase(outingRepo)
 	getOutingsByGroupUC := app.NewGetOutingsByGroupUseCase(outingRepo)
 	getMyOutingsUC := app.NewGetMyOutingsUseCase(outingRepo)
@@ -24,9 +28,9 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	deleteOutingUC := app.NewDeleteOutingUseCase(outingRepo)
 
 	// Use Cases - Participants
-	addParticipantUC := app.NewAddParticipantUseCase(outingRepo)
+	addParticipantUC := app.NewAddParticipantUseCase(outingRepo, userRepo, notifSvc)
 	getParticipantsUC := app.NewGetParticipantsUseCase(outingRepo)
-	confirmParticipationUC := app.NewConfirmParticipationUseCase(outingRepo)
+	confirmParticipationUC := app.NewConfirmParticipationUseCase(outingRepo, userRepo, notifSvc)
 	removeParticipantUC := app.NewRemoveParticipantUseCase(outingRepo)
 
 	// Use Cases - Items

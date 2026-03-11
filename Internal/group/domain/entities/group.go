@@ -11,3 +11,9 @@ type Group struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+type GroupWithDetails struct {
+	Group
+	OwnerUsername string
+	MemberCount   int
+}

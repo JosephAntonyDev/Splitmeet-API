@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
+func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *core.NotificationService) {
 	// Repositories
 	groupRepo := repository.NewGroupPostgreSQLRepository(dbPool)
 	userRepo := userRepository.NewUserPostgreSQLRepository(dbPool)
@@ -23,11 +23,13 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getMyGroupsUseCase := app.NewGetMyGroups(groupRepo)
 	updateGroupUseCase := app.NewUpdateGroup(groupRepo)
 	deleteGroupUseCase := app.NewDeleteGroup(groupRepo)
-	inviteMemberUseCase := app.NewInviteMember(groupRepo, userRepo)
-	respondInvitationUseCase := app.NewRespondInvitation(groupRepo)
+	inviteMemberUseCase := app.NewInviteMember(groupRepo, userRepo, notifSvc)
+	respondInvitationUseCase := app.NewRespondInvitation(groupRepo, userRepo, notifSvc)
 	getMembersUseCase := app.NewGetMembers(groupRepo)
 	removeMemberUseCase := app.NewRemoveMember(groupRepo)
 	getPendingInvitationsUseCase := app.NewGetPendingInvitations(groupRepo)
+	transferOwnershipUseCase := app.NewTransferOwnership(groupRepo)
+	setMemberRoleUseCase := app.NewSetMemberRole(groupRepo)
 
 	// Controllers
 	createGroupController := controllers.NewCreateGroupController(createGroupUseCase)
@@ -40,6 +42,8 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getMembersController := controllers.NewGetMembersController(getMembersUseCase)
 	removeMemberController := controllers.NewRemoveMemberController(removeMemberUseCase)
 	getPendingInvitationsController := controllers.NewGetPendingInvitationsController(getPendingInvitationsUseCase)
+	transferOwnershipController := controllers.NewTransferOwnershipController(transferOwnershipUseCase)
+	setMemberRoleController := controllers.NewSetMemberRoleController(setMemberRoleUseCase)
 
 	// JWT Secret
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -57,6 +61,8 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		getMembersController,
 		removeMemberController,
 		getPendingInvitationsController,
+		transferOwnershipController,
+		setMemberRoleController,
 		jwtSecret,
 	)
 }

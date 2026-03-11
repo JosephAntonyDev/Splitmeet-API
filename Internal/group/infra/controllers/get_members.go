@@ -44,6 +44,7 @@ func (ctrl *GetMembersController) Handle(c *gin.Context) {
 			"username":     m.Username,
 			"name":         m.Name,
 			"email":        m.Email,
+			"role":         m.Role,
 			"status":       m.Status,
 			"invited_by":   m.InvitedBy,
 			"invited_at":   m.InvitedAt,

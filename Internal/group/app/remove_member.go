@@ -40,19 +40,32 @@ func (uc *RemoveMember) Execute(input RemoveMemberInput) error {
 		return fmt.Errorf("no tienes acceso a este grupo")
 	}
 
-	// Solo el owner puede remover a otros, o un usuario puede salirse a sí mismo
-	if input.MemberToRemove != input.RequestedBy && group.OwnerID != input.RequestedBy {
-		return fmt.Errorf("solo el creador del grupo puede remover miembros")
+	// El owner y admins pueden remover a otros, o un usuario puede salirse a sí mismo
+	if input.MemberToRemove != input.RequestedBy {
+		if requester.Role != entities.MemberRoleOwner && requester.Role != entities.MemberRoleAdmin {
+			return fmt.Errorf("solo el propietario o administradores pueden remover miembros")
+		}
 	}
 
 	// No se puede remover al owner
 	if input.MemberToRemove == group.OwnerID && input.RequestedBy != group.OwnerID {
-		return fmt.Errorf("no se puede remover al creador del grupo")
+		return fmt.Errorf("no se puede remover al propietario del grupo")
 	}
 
 	// Si el owner quiere salirse, debe transferir o eliminar el grupo
 	if input.MemberToRemove == group.OwnerID {
-		return fmt.Errorf("el creador no puede abandonar el grupo, debe eliminarlo")
+		return fmt.Errorf("el propietario no puede abandonar el grupo, debe transferir la propiedad o eliminarlo")
+	}
+
+	// Un admin no puede remover a otro admin (solo el owner puede)
+	if input.MemberToRemove != input.RequestedBy {
+		target, err := uc.repo.GetMemberByGroupAndUser(input.GroupID, input.MemberToRemove)
+		if err != nil {
+			return fmt.Errorf("error al verificar miembro: %v", err)
+		}
+		if target != nil && target.Role == entities.MemberRoleAdmin && requester.Role != entities.MemberRoleOwner {
+			return fmt.Errorf("solo el propietario puede remover administradores")
+		}
 	}
 
 	err = uc.repo.RemoveMember(input.GroupID, input.MemberToRemove)

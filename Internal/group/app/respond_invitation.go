@@ -2,18 +2,21 @@ package app
 
 import (
 	"fmt"
-	"time"
 
+	"github.com/JosephAntonyDev/splitmeet-api/internal/core"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/group/domain/entities"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/group/domain/repository"
+	userRepository "github.com/JosephAntonyDev/splitmeet-api/internal/user/domain/repository"
 )
 
 type RespondInvitation struct {
-	repo repository.GroupRepository
+	repo     repository.GroupRepository
+	userRepo userRepository.UserRepository
+	notifSvc *core.NotificationService
 }
 
-func NewRespondInvitation(repo repository.GroupRepository) *RespondInvitation {
-	return &RespondInvitation{repo: repo}
+func NewRespondInvitation(repo repository.GroupRepository, userRepo userRepository.UserRepository, notifSvc *core.NotificationService) *RespondInvitation {
+	return &RespondInvitation{repo: repo, userRepo: userRepo, notifSvc: notifSvc}
 }
 
 type RespondInvitationInput struct {
@@ -47,8 +50,30 @@ func (uc *RespondInvitation) Execute(input RespondInvitationInput) error {
 		return fmt.Errorf("error al actualizar invitación: %v", err)
 	}
 
-	// Actualizar responded_at (esto se puede hacer en el repo también)
-	_ = time.Now() // timestamp de respuesta
+	// Send notification to the group owner about the response
+	if uc.notifSvc != nil {
+		group, _ := uc.repo.GetByID(input.GroupID)
+		responder, _ := uc.userRepo.GetByID(input.UserID)
+
+		if group != nil && responder != nil {
+			notifType := "invitation_accepted"
+			action := "aceptó"
+			if !input.Accept {
+				notifType = "invitation_rejected"
+				action = "rechazó"
+			}
+
+			uc.notifSvc.Send(core.NotificationPayload{
+				UserID:      group.OwnerID,
+				Type:        notifType,
+				Title:       "Respuesta a invitación",
+				Message:     fmt.Sprintf("%s %s la invitación al grupo %s", responder.Name, action, group.Name),
+				ReferenceID: &group.ID,
+				InviterName: responder.Name,
+				GroupName:   group.Name,
+			})
+		}
+	}
 
 	return nil
 }

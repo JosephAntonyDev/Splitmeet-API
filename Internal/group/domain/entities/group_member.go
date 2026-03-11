@@ -10,10 +10,19 @@ const (
 	MemberStatusRejected MemberStatus = "rejected"
 )
 
+type MemberRole string
+
+const (
+	MemberRoleOwner  MemberRole = "owner"
+	MemberRoleAdmin  MemberRole = "admin"
+	MemberRoleMember MemberRole = "member"
+)
+
 type GroupMember struct {
 	ID          int64
 	GroupID     int64
 	UserID      int64
+	Role        MemberRole
 	Status      MemberStatus
 	InvitedBy   *int64
 	InvitedAt   time.Time

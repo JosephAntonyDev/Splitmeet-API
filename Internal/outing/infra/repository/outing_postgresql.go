@@ -248,13 +248,14 @@ func (r *OutingPostgresql) MarkAsCompleted(outingID int64) error {
 
 func (r *OutingPostgresql) AddParticipant(participant *entities.OutingParticipant) error {
 	query := `
-		INSERT INTO outing_participants (outing_id, user_id, status, amount_owed, custom_amount)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO outing_participants (outing_id, user_id, invited_by, status, amount_owed, custom_amount)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, joined_at
 	`
 	return r.db.QueryRow(query,
 		participant.OutingID,
 		participant.UserID,
+		participant.InvitedBy,
 		participant.Status,
 		participant.AmountOwed,
 		participant.CustomAmount,

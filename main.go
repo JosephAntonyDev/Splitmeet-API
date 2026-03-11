@@ -10,6 +10,7 @@ import (
 	categoryInfra "github.com/JosephAntonyDev/splitmeet-api/internal/category/infra"
 	"github.com/JosephAntonyDev/splitmeet-api/internal/core"
 	groupInfra "github.com/JosephAntonyDev/splitmeet-api/internal/group/infra"
+	notificationInfra "github.com/JosephAntonyDev/splitmeet-api/internal/notification/infra"
 	outingInfra "github.com/JosephAntonyDev/splitmeet-api/internal/outing/infra"
 	paymentInfra "github.com/JosephAntonyDev/splitmeet-api/internal/payment/infra"
 	productInfra "github.com/JosephAntonyDev/splitmeet-api/internal/product/infra"
@@ -28,6 +29,10 @@ func main() {
 	}
 	defer dbPool.DB.Close()
 
+	// SSE Hub y Notification Service
+	sseHub := core.NewSSEHub()
+	notifSvc := core.NewNotificationService(dbPool, sseHub)
+
 	r := gin.Default()
 
 	r.Use(core.SetupCORS())
@@ -36,9 +41,10 @@ func main() {
 	userInfra.SetupDependencies(r, dbPool)
 	categoryInfra.SetupDependencies(r, dbPool)
 	productInfra.SetupDependencies(r, dbPool)
-	groupInfra.SetupDependencies(r, dbPool)
-	outingInfra.SetupDependencies(r, dbPool)
+	groupInfra.SetupDependencies(r, dbPool, notifSvc)
+	outingInfra.SetupDependencies(r, dbPool, notifSvc)
 	paymentInfra.SetupDependencies(r, dbPool)
+	notificationInfra.SetupDependencies(r, dbPool, sseHub)
 
 	port := os.Getenv("PORT")
 	if port == "" {

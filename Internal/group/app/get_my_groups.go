@@ -15,10 +15,17 @@ func NewGetMyGroups(repo repository.GroupRepository) *GetMyGroups {
 	return &GetMyGroups{repo: repo}
 }
 
-func (uc *GetMyGroups) Execute(userID int64) ([]entities.Group, error) {
-	groups, err := uc.repo.GetByUserID(userID)
+type GetMyGroupsInput struct {
+	UserID int64
+	Limit  int
+	Offset int
+	Search string
+}
+
+func (uc *GetMyGroups) Execute(input GetMyGroupsInput) ([]entities.GroupWithDetails, int, error) {
+	groups, total, err := uc.repo.GetByUserID(input.UserID, input.Limit, input.Offset, input.Search)
 	if err != nil {
-		return nil, fmt.Errorf("error al obtener grupos: %v", err)
+		return nil, 0, fmt.Errorf("error al obtener grupos: %v", err)
 	}
-	return groups, nil
+	return groups, total, nil
 }

@@ -1,10 +1,11 @@
 # 🧩 Splitmeet API
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version"/>
+  <img src="https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version"/>
   <img src="https://img.shields.io/badge/Gin-Framework-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Gin"/>
   <img src="https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
   <img src="https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT"/>
+  <img src="https://img.shields.io/badge/SSE-Realtime-FF6B6B?style=for-the-badge" alt="SSE"/>
   <img src="https://img.shields.io/badge/Architecture-Hexagonal-FF6B6B?style=for-the-badge" alt="Hexagonal"/>
 </p>
 
@@ -34,11 +35,15 @@
 | Característica | Descripción |
 |----------------|-------------|
 | **Gestión de Salidas** | Crea eventos con nombre, fecha, categoría y descripción |
-| **Grupos de Amigos** | Organiza tus contactos en grupos para crear salidas recurrentes |
+| **Grupos de Amigos** | Organiza tus contactos en grupos con roles (owner, admin, member) |
 | **Invitaciones** | Sistema de invitación con estados (pendiente, aceptado, rechazado) |
+| **Notificaciones en Tiempo Real** | SSE (Server-Sent Events) para notificaciones push al móvil |
 | **Productos Predefinidos** | Catálogo de productos por categoría (restaurante, cine, etc.) |
 | **División Inteligente** | Múltiples modos de división de gastos |
 | **Tracking de Pagos** | Semáforo visual de quién ha pagado y quién debe |
+| **Paginación** | Paginación y búsqueda en listados (grupos, notificaciones) |
+| **Roles en Grupos** | Owner, admin y member con permisos diferenciados |
+| **Auto-invitación** | Al crear salida con grupo, se invita automáticamente a todos los miembros |
 | **Historial** | Registro completo de todas las salidas para referencia futura |
 
 ### Tipos de División de Gastos
@@ -148,7 +153,7 @@ Splitmeet implementa una **arquitectura hexagonal** que separa claramente las re
 |------|-----------------|----------|
 | **Domain** | Reglas de negocio puras | Entities, Value Objects |
 | **Application** | Casos de uso | CreateOuting, AddItem, RegisterPayment |
-| **Infrastructure** | Implementaciones concretas | PostgreSQL repos, JWT adapter |
+| **Infrastructure** | Implementaciones concretas | PostgreSQL repos, JWT adapter, SSE Hub |
 | **Interfaces** | Puntos de entrada/salida | HTTP Controllers, Routes |
 
 ---
@@ -167,11 +172,12 @@ Splitmeet implementa una **arquitectura hexagonal** que separa claramente las re
     │   ✅ HECHO   │
     └──────┬───────┘
            │
-           ▼
-    ┌──────────────┐         ┌──────────────┐
-    │   CATEGORY   │────────>│   PRODUCT    │
-    │   ✅ HECHO   │         │   ✅ HECHO   │
-    └──────────────┘         └──────────────┘
+           ├──────────────────────────────┐
+           ▼                              ▼
+    ┌──────────────┐         ┌──────────────────┐
+    │   CATEGORY   │────────>│   PRODUCT        │
+    │   ✅ HECHO   │         │   ✅ HECHO       │
+    └──────────────┘         └──────────────────┘
            │                        │
            │    ┌──────────────┐    │
            └───>│    GROUP     │<───┘
@@ -185,28 +191,30 @@ Splitmeet implementa una **arquitectura hexagonal** que separa claramente las re
                 └──────┬───────┘
                        │
                        ▼
-                ┌──────────────┐
-                │   PAYMENT    │
-                │   ✅ HECHO   │
-                └──────────────┘
+                ┌──────────────┐       ┌───────────────────┐
+                │   PAYMENT    │       │  NOTIFICATION     │
+                │   ✅ HECHO   │       │  ✅ HECHO (SSE)   │
+                └──────────────┘       └───────────────────┘
 ```
 
 ### Descripción de Módulos
 
-#### 1. 👤 User (Implementado)
+#### 1. 👤 User
 Gestión completa de usuarios con autenticación JWT.
 
 ```
 Funcionalidades:
 ├── Registro de usuario
 ├── Login con JWT
-├── Obtener perfil
+├── Obtener perfil propio
 ├── Actualizar perfil
 ├── Buscar por username
+├── Buscar usuarios (parcial)
+├── Ver invitaciones pendientes
 └── Eliminar cuenta
 ```
 
-#### 2. 🏷️ Category (Implementado)
+#### 2. 🏷️ Category
 Categorías predefinidas para clasificar salidas.
 
 ```
@@ -223,7 +231,7 @@ Categorías iniciales:
 └── 📦 Otro
 ```
 
-#### 3. 📦 Product (Implementado)
+#### 3. 📦 Product
 Catálogo de productos predefinidos y personalizados.
 
 ```
@@ -232,46 +240,48 @@ Funcionalidades:
 ├── Buscar productos
 ├── Crear producto personalizado
 └── Productos predefinidos (sin precio fijo)
-
-Características del producto:
-├── Nombre
-├── Presentación (Jarra, Vaso, Bolsa, etc.)
-├── Tamaño (Chico, Mediano, Grande)
-└── Precio (opcional en predefinidos)
 ```
 
-#### 4. 👥 Group (Implementado)
-Grupos de amigos para organizar salidas.
+#### 4. 👥 Group
+Grupos de amigos con roles y permisos.
 
 ```
 Funcionalidades:
-├── Crear grupo
-├── Listar mis grupos
+├── Crear grupo (creador = owner)
+├── Listar mis grupos (paginado, con búsqueda)
 ├── Ver detalle de grupo
-├── Invitar miembro
-├── Responder invitación (aceptar/rechazar)
-├── Eliminar miembro
-├── Actualizar grupo
-└── Eliminar grupo
+├── Invitar miembro (envía notificación)
+├── Responder invitación (notifica al owner)
+├── Eliminar miembro (owner/admin)
+├── Actualizar grupo (owner/admin)
+├── Eliminar grupo (owner)
+├── Transferir ownership a otro miembro
+└── Cambiar rol de miembro (admin/member)
 
-Estados de membresía:
+Roles de membresía:
+├── 👑 Owner   – Control total del grupo
+├── 🛡️ Admin   – Puede editar grupo y remover miembros
+└── 👤 Member  – Participante estándar
+
+Estados de invitación:
 ├── 🟡 Pendiente (pending)
 ├── 🟢 Aceptado (accepted)
 └── 🔴 Rechazado (rejected)
 ```
 
-#### 5. 🎉 Outing (Implementado)
+#### 5. 🎉 Outing
 Módulo central para gestión de salidas/eventos.
 
 ```
 Funcionalidades:
 ├── Crear salida (con o sin grupo)
+├── Auto-invitación de miembros del grupo
 ├── Listar mis salidas
 ├── Ver detalle de salida
 ├── Actualizar salida
 ├── Eliminar salida
-├── Agregar participante
-├── Confirmar participación
+├── Agregar participante (envía notificación)
+├── Confirmar participación (notifica al creador)
 ├── Agregar producto/item
 ├── Actualizar item
 ├── Eliminar item
@@ -279,12 +289,13 @@ Funcionalidades:
 └── Calcular montos automáticamente
 
 Reglas de negocio:
+├── Al crear con group_id: se invita automáticamente a todos los miembros aceptados
 ├── Solo editable si status = 'active'
 ├── Se bloquea cuando todos pagan
 └── Cálculos automáticos al agregar items
 ```
 
-#### 6. 💳 Payment (Implementado)
+#### 6. 💳 Payment
 Sistema de tracking de pagos con validaciones.
 
 ```
@@ -299,12 +310,30 @@ Estados de pago:
 ├── 🟡 Pendiente (pending)
 ├── 🟢 Pagado (paid)
 └── 🔴 Cancelado (cancelled)
+```
 
-Validaciones:
-├── No permite pagar más del saldo restante
-├── No permite pagar si no hay items
-├── Auto-cancela pagos pendientes cuando se alcanza el total
-└── Al pagar todos → outing.is_editable = false
+#### 7. 🔔 Notification
+Notificaciones en tiempo real via SSE (Server-Sent Events).
+
+```
+Funcionalidades:
+├── Stream SSE en tiempo real (GET /notifications/stream)
+├── Listar notificaciones (paginado)
+├── Marcar notificación como leída
+├── Marcar todas como leídas
+└── Contador de no leídas
+
+Tipos de notificación:
+├── 📨 group_invitation     – Te invitaron a un grupo
+├── 🎉 outing_invitation    – Te invitaron a una salida
+├── ✅ invitation_accepted   – Alguien aceptó tu invitación
+└── ❌ invitation_rejected   – Alguien rechazó tu invitación
+
+Flujo SSE:
+├── Cliente se conecta a GET /notifications/stream
+├── Servidor mantiene conexión abierta
+├── Cuando se crea una notificación, se envía al cliente en tiempo real
+└── Keep-alive cada 30 segundos para mantener la conexión
 ```
 
 ---
@@ -338,44 +367,45 @@ Validaciones:
       │ id          │◄────────>│ id           │          │ id          │
       │ name        │          │ group_id     │          │ name        │
       │ description │          │ user_id      │          │ description │
-      │ owner_id    │          │ status       │          │ category_id │
-      │ is_active   │          │ invited_by   │          │ group_id    │
-      └─────────────┘          │ invited_at   │          │ creator_id  │
-                               │ responded_at │          │ outing_date │
-                               └──────────────┘          │ split_type  │
-                                                         │ total_amount│
-      ┌─────────────┐                                    │ status      │
-      │ CATEGORIES  │                                    │ is_editable │
-      ├─────────────┤                                    └──────┬──────┘
-      │ id          │◄───────────────────────────────────────────┤
-      │ name        │                                            │
-      │ icon        │                                            │
-      │ is_active   │          ┌────────────────────┐            │
-      └──────┬──────┘          │OUTING_PARTICIPANTS │            │
-             │                 ├────────────────────┤            │
-             │                 │ id                 │◄───────────┤
-             ▼                 │ outing_id          │            │
-      ┌─────────────┐          │ user_id            │            │
-      │  PRODUCTS   │          │ status             │            │
-      ├─────────────┤          │ amount_owed        │            │
-      │ id          │          │ custom_amount      │            │
-      │ category_id │          │ joined_at          │            │
-      │ name        │          └─────────┬──────────┘            │
-      │ presentation│                    │                       │
-      │ size        │                    │                       │
-      │ default_price          ┌─────────────────┐               │
-      │ is_predefined│         │  ITEM_SPLITS    │               │
-      │ created_by  │          ├─────────────────┤               │
-      └──────┬──────┘          │ id              │               │
-             │                 │ outing_item_id  │               │
-             │                 │ participant_id  │               │
-             │                 │ split_amount    │               │
-             │                 │ percentage      │               │
-             │                 └─────────────────┘               │
-             │                          ▲                        │
-             │                          │                        │
-             │                 ┌─────────────────┐               │
-             └────────────────>│  OUTING_ITEMS   │◄──────────────┘
+      │ owner_id    │          │ role         │          │ category_id │
+      │ is_active   │          │ status       │          │ group_id    │
+      └─────────────┘          │ invited_by   │          │ creator_id  │
+                               │ invited_at   │          │ outing_date │
+                               │ responded_at │          │ split_type  │
+                               └──────────────┘          │ total_amount│
+                                                         │ status      │
+      ┌─────────────┐                                    │ is_editable │
+      │ CATEGORIES  │                                    └──────┬──────┘
+      ├─────────────┤                                           │
+      │ id          │◄──────────────────────────────────────────┤
+      │ name        │                                           │
+      │ icon        │                                           │
+      │ is_active   │          ┌────────────────────┐           │
+      └──────┬──────┘          │OUTING_PARTICIPANTS │           │
+             │                 ├────────────────────┤           │
+             │                 │ id                 │◄──────────┤
+             ▼                 │ outing_id          │           │
+      ┌─────────────┐          │ user_id            │           │
+      │  PRODUCTS   │          │ invited_by         │           │
+      ├─────────────┤          │ status             │           │
+      │ id          │          │ amount_owed        │           │
+      │ category_id │          │ custom_amount      │           │
+      │ name        │          │ joined_at          │           │
+      │ presentation│          └─────────┬──────────┘           │
+      │ size        │                    │                      │
+      │ default_price          ┌─────────────────┐              │
+      │ is_predefined│         │  ITEM_SPLITS    │              │
+      │ created_by  │          ├─────────────────┤              │
+      └──────┬──────┘          │ id              │              │
+             │                 │ outing_item_id  │              │
+             │                 │ participant_id  │              │
+             │                 │ split_amount    │              │
+             │                 │ percentage      │              │
+             │                 └─────────────────┘              │
+             │                          ▲                       │
+             │                          │                       │
+             │                 ┌─────────────────┐              │
+             └────────────────>│  OUTING_ITEMS   │◄─────────────┘
                                ├─────────────────┤
                                │ id              │
                                │ outing_id       │
@@ -388,23 +418,29 @@ Validaciones:
                                │ is_shared       │
                                └─────────────────┘
 
-                               ┌─────────────────┐
-                               │    PAYMENTS     │
-                               ├─────────────────┤
-                               │ id              │
-                               │ outing_id       │
-                               │ participant_id  │
-                               │ amount          │
-                               │ status          │
-                               │ paid_at         │  (fecha confirmación)
-                               │ confirmed_by    │
-                               │ notes           │
-                               └─────────────────┘
+      ┌─────────────────┐             ┌─────────────────┐
+      │    PAYMENTS     │             │  NOTIFICATIONS  │
+      ├─────────────────┤             ├─────────────────┤
+      │ id              │             │ id              │
+      │ outing_id       │             │ user_id         │
+      │ participant_id  │             │ type            │
+      │ amount          │             │ title           │
+      │ status          │             │ message         │
+      │ paid_at         │             │ reference_id    │
+      │ confirmed_by    │             │ inviter_name    │
+      │ notes           │             │ group_name      │
+      └─────────────────┘             │ outing_name     │
+                                      │ is_read         │
+                                      │ created_at      │
+                                      └─────────────────┘
 ```
 
 ### Enums del Sistema
 
 ```sql
+-- Roles de membresía en grupo
+member_role: 'owner' | 'admin' | 'member'
+
 -- Estados de membresía en grupo
 member_status: 'pending' | 'accepted' | 'rejected'
 
@@ -419,6 +455,9 @@ participant_status: 'pending' | 'confirmed' | 'declined'
 
 -- Estados de pago
 payment_status: 'pending' | 'paid' | 'cancelled'
+
+-- Tipos de notificación
+notification_type: 'group_invitation' | 'outing_invitation' | 'invitation_accepted' | 'invitation_rejected'
 ```
 
 ---
@@ -440,29 +479,32 @@ payment_status: 'pending' | 'paid' | 'cancelled'
         │                                 │                                │
         │  ◄── Grupo creado (owner: A)    │                                │
         │                                 │                                │
-        │  2. POST /groups/:id/invite     │                                │
+        │  2. POST /groups/:id/members    │                                │
         │  {username: "userB"}            │                                │
         │────────────────────────────────>│                                │
         │                                 │                                │
         │                                 │  Crear member con              │
         │                                 │  status: 'pending'             │
+        │                                 │  role: 'member'                │
         │                                 │                                │
-        │                                 │  [Notificación]                │
+        │                                 │  [SSE Notification]            │
+        │                                 │  type: group_invitation        │
         │                                 │────────────────────────────────>
         │                                 │                                │
-        │                                 │  3. PATCH /groups/:id/invitation
+        │                                 │  3. PATCH /groups/:id/members/respond
         │                                 │  {action: "accept"}            │
         │                                 │<────────────────────────────────
         │                                 │                                │
-        │                                 │  Actualizar status:            │
-        │                                 │  'accepted'                    │
+        │                                 │  Actualizar status: 'accepted' │
         │                                 │                                │
-        │  ◄── B es ahora miembro ────────│                                │
+        │  [SSE Notification]             │                                │
+        │  type: invitation_accepted      │                                │
+        │  ◄──────────────────────────────│                                │
         │                                 │                                │
         ▼                                 ▼                                ▼
 ```
 
-### Flujo 2: Crear Salida desde un Grupo
+### Flujo 2: Crear Salida desde un Grupo (Auto-invitación)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -471,36 +513,32 @@ payment_status: 'pending' | 'paid' | 'cancelled'
 
     CREADOR                            SISTEMA                      MIEMBROS
         │                                 │                             │
-        │  1. GET /groups/:id/members     │                             │
-        │────────────────────────────────>│                             │
-        │                                 │                             │
-        │  ◄── Lista de miembros          │                             │
-        │      aceptados                  │                             │
-        │                                 │                             │
-        │  2. POST /outings               │                             │
+        │  1. POST /outings               │                             │
         │  {                              │                             │
         │    name: "Cena viernes",        │                             │
         │    group_id: 1,                 │                             │
-        │    category_id: 1,              │                             │
-        │    outing_date: "2026-02-10",   │                             │
-        │    participant_ids: [2, 3, 4]   │                             │
+        │    ...                          │                             │
         │  }                              │                             │
         │────────────────────────────────>│                             │
         │                                 │                             │
         │                                 │  Crear outing               │
-        │                                 │  Crear participants         │
-        │                                 │  con status: 'pending'      │
+        │                                 │  Auto-invitar a todos       │
+        │                                 │  los miembros aceptados     │
+        │                                 │  del grupo                  │
         │                                 │                             │
-        │                                 │  [Notificaciones]           │
+        │                                 │  [SSE Notifications]        │
+        │                                 │  type: outing_invitation    │
+        │                                 │  a cada miembro             │
         │                                 │─────────────────────────────>
         │                                 │                             │
-        │                                 │  3. PATCH /outings/:id/     │
-        │                                 │     participants/:userId/   │
-        │                                 │     confirm                 │
+        │                                 │  2. PATCH /outings/:id/     │
+        │                                 │     participants/confirm    │
+        │                                 │  {accept: true}             │
         │                                 │<─────────────────────────────
         │                                 │                             │
-        │                                 │  Actualizar status:         │
-        │                                 │  'confirmed'                │
+        │  [SSE Notification]             │  Actualizar status:         │
+        │  type: invitation_accepted      │  'confirmed'                │
+        │  ◄──────────────────────────────│                             │
         │                                 │                             │
         ▼                                 ▼                             ▼
 ```
@@ -534,18 +572,7 @@ payment_status: 'pending' | 'paid' | 'cancelled'
         │                                 │  │ subtotal = $100     │
         │                                 │  └─────────────────────┘
         │                                 │
-        │  3. POST /outings/:id/items     │
-        │  {                              │
-        │    custom_name: "Gambas",       │  // Producto personalizado
-        │    custom_presentation: "Plato",│
-        │    quantity: 1,                 │
-        │    unit_price: 200.00           │
-        │  }                              │
-        │────────────────────────────────>│
-        │                                 │
-        │  ◄── Item creado                │
-        │                                 │
-        │  4. POST /outings/:id/items/:itemId/splits
+        │  3. POST /outings/:id/items/:itemId/splits
         │  {                              │
         │    participant_ids: [1, 3]      │  // Solo Pedro y Ana
         │  }                              │
@@ -556,9 +583,6 @@ payment_status: 'pending' | 'paid' | 'cancelled'
         │                                 │  │ Pedro: $100         │
         │                                 │  │ Ana: $100           │
         │                                 │  └─────────────────────┘
-        │                                 │
-        │                                 │  Recalcular amount_owed
-        │                                 │  de cada participante
         │                                 │
         ▼                                 ▼
 ```
@@ -572,82 +596,33 @@ payment_status: 'pending' | 'paid' | 'cancelled'
 
     PARTICIPANTE                       SISTEMA                         CREADOR
         │                                 │                                │
-        │  1. GET /outings/:id/payments   │                                │
+        │  1. GET /payments/outing/:id    │                                │
+        │     /summary                    │                                │
         │────────────────────────────────>│                                │
         │                                 │                                │
         │  ◄── Estado de todos los pagos  │                                │
         │      Mi deuda: $250             │                                │
-        │      Status: pending            │                                │
         │                                 │                                │
-        │  [Realiza pago físico/transfer] │                                │
-        │                                 │                                │
-        │  2. PATCH /payments/:id/pay     │                                │
+        │  2. POST /payments              │                                │
+        │  {outing_id, amount}            │                                │
         │────────────────────────────────>│                                │
         │                                 │                                │
-        │                                 │  Actualizar payment:           │
-        │                                 │  status = 'paid'               │
-        │                                 │  paid_at = NOW()               │
+        │                                 │  Crear payment pending         │
         │                                 │                                │
-        │                                 │  [Notificación al creador]     │
-        │                                 │────────────────────────────────>
-        │                                 │                                │
-        │                                 │  3. PATCH /payments/:id/confirm
+        │                                 │  3. PATCH /payments/:id/confirm│
         │                                 │<────────────────────────────────
         │                                 │                                │
         │                                 │  confirmed_by = creador_id     │
         │                                 │                                │
         │                                 │  ┌─────────────────────────┐   │
         │                                 │  │ ¿Todos pagaron?         │   │
-        │                                 │  │                         │   │
         │                                 │  │ SI → outing.status =    │   │
         │                                 │  │      'completed'        │   │
         │                                 │  │      is_editable = false│   │
-        │                                 │  │                         │   │
         │                                 │  │ NO → Mantener 'active'  │   │
         │                                 │  └─────────────────────────┘   │
         │                                 │                                │
         ▼                                 ▼                                ▼
-```
-
-### Flujo 5: Cálculo Automático de Montos
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ALGORITMO: CÁLCULO DE MONTOS                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-    Ejemplo: Salida con 4 participantes, split_type = 'per_consumption'
-
-    ┌─────────────────────────────────────────────────────────────────┐
-    │                        OUTING_ITEMS                             │
-    ├─────────────────────────────────────────────────────────────────┤
-    │ Item 1: Jarra Agua    │ $100  │ is_shared: TRUE  │ → Split     │
-    │ Item 2: Hamburguesa   │ $150  │ is_shared: FALSE │ → 1 persona │
-    │ Item 3: Pizza         │ $200  │ is_shared: TRUE  │ → Split     │
-    │ Item 4: Refresco      │ $30   │ is_shared: FALSE │ → 1 persona │
-    └─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-    ┌─────────────────────────────────────────────────────────────────┐
-    │                        ITEM_SPLITS                              │
-    ├─────────────────────────────────────────────────────────────────┤
-    │ Item 1 ($100) → Pedro: $25, Ana: $25, Luis: $25, María: $25    │
-    │ Item 2 ($150) → Pedro: $150                                     │
-    │ Item 3 ($200) → Ana: $100, Luis: $100                          │
-    │ Item 4 ($30)  → María: $30                                      │
-    └─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-    ┌─────────────────────────────────────────────────────────────────┐
-    │                    RESUMEN POR PERSONA                          │
-    ├─────────────────────────────────────────────────────────────────┤
-    │ Pedro:  $25 + $150         = $175                               │
-    │ Ana:    $25 + $100         = $125                               │
-    │ Luis:   $25 + $100         = $125                               │
-    │ María:  $25 + $30          = $55                                │
-    ├─────────────────────────────────────────────────────────────────┤
-    │ TOTAL:                       $480                               │
-    └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -660,9 +635,15 @@ Todos los endpoints (excepto registro y login) requieren header:
 Authorization: Bearer <JWT_TOKEN>
 ```
 
+### Paginación
+Los endpoints paginados aceptan query parameters:
+```
+?page=1&limit=10&search=texto&sort=created_at&order=desc
+```
+
 ### Endpoints por Módulo
 
-#### 👤 Users (Implementado)
+#### 👤 Users
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -676,14 +657,14 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/users/invitations` | Ver invitaciones pendientes |
 | `DELETE` | `/users/delete` | Eliminar mi cuenta |
 
-#### 🏷️ Categories (Implementado)
+#### 🏷️ Categories
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/categories` | Listar todas las categorías |
 | `GET` | `/categories/:id` | Obtener categoría por ID |
 
-#### 📦 Products (Implementado)
+#### 📦 Products
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -691,33 +672,36 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/products/:id` | Obtener producto por ID |
 | `POST` | `/products` | Crear producto personalizado |
 
-#### 👥 Groups (Implementado)
+#### 👥 Groups
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/groups` | Crear grupo |
-| `GET` | `/groups` | Listar mis grupos |
+| `POST` | `/groups` | Crear grupo (creador = owner) |
+| `GET` | `/groups?page=1&limit=10&search=` | Listar mis grupos (paginado) |
 | `GET` | `/groups/:id` | Obtener detalle de grupo |
-| `PATCH` | `/groups/:id` | Actualizar grupo |
-| `DELETE` | `/groups/:id` | Eliminar grupo |
-| `GET` | `/groups/:id/members` | Listar miembros |
-| `POST` | `/groups/:id/members` | Invitar usuario |
-| `PATCH` | `/groups/:id/members/respond` | Responder invitación (usa `{"status": "accepted"}`) |
-| `DELETE` | `/groups/:id/members/:userId` | Remover miembro |
+| `PATCH` | `/groups/:id` | Actualizar grupo (owner/admin) |
+| `DELETE` | `/groups/:id` | Eliminar grupo (owner) |
+| `GET` | `/groups/:id/members` | Listar miembros (con rol) |
+| `POST` | `/groups/:id/members` | Invitar usuario (envía notificación SSE) |
+| `PATCH` | `/groups/:id/members/respond` | Responder invitación (notifica al owner) |
+| `DELETE` | `/groups/:id/members/:userId` | Remover miembro (owner/admin) |
+| `GET` | `/groups/invitations` | Ver invitaciones pendientes |
+| `PATCH` | `/groups/:id/transfer` | Transferir ownership |
+| `PATCH` | `/groups/:id/members/:userId/role` | Cambiar rol (owner only) |
 
-#### 🎉 Outings (Implementado)
+#### 🎉 Outings
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/outings` | Crear salida |
+| `POST` | `/outings` | Crear salida (auto-invita grupo si `group_id`) |
 | `GET` | `/outings/me` | Listar mis salidas |
 | `GET` | `/outings/:id` | Obtener detalle de salida |
-| `GET` | `/outings/group/:id` | Salidas de un grupo |
+| `GET` | `/outings/group/:groupId` | Salidas de un grupo |
 | `PATCH` | `/outings/:id` | Actualizar salida |
 | `DELETE` | `/outings/:id` | Eliminar salida |
 | `GET` | `/outings/:id/participants` | Listar participantes |
-| `POST` | `/outings/:id/participants` | Agregar participante |
-| `PATCH` | `/outings/:id/participants/confirm` | Confirmar asistencia (usa `{"accept": true}`) |
+| `POST` | `/outings/:id/participants` | Agregar participante (con notificación) |
+| `PATCH` | `/outings/:id/participants/confirm` | Confirmar asistencia (notifica creador) |
 | `DELETE` | `/outings/:id/participants/:userId` | Remover participante |
 | `GET` | `/outings/:id/items` | Listar items |
 | `POST` | `/outings/:id/items` | Agregar item |
@@ -727,7 +711,7 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/outings/:id/items/:itemId/splits` | Ver división de item |
 | `GET` | `/outings/:id/calculate` | Calcular montos |
 
-#### 💳 Payments (Implementado)
+#### 💳 Payments
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -737,6 +721,28 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/payments/outing/:id/summary` | Resumen de pagos |
 | `PATCH` | `/payments/:id/confirm` | Confirmar pago recibido |
 | `DELETE` | `/payments/:id` | Eliminar pago pendiente |
+
+#### 🔔 Notifications
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/notifications?page=1&limit=20` | Listar notificaciones (paginado) |
+| `GET` | `/notifications/stream` | Stream SSE en tiempo real |
+| `PATCH` | `/notifications/:id/read` | Marcar notificación como leída |
+| `PATCH` | `/notifications/read-all` | Marcar todas como leídas |
+
+**SSE Stream:**
+```
+GET /notifications/stream
+Authorization: Bearer <JWT_TOKEN>
+
+# Respuesta (text/event-stream):
+event: notification
+data: {"id":1,"type":"group_invitation","title":"Invitación a grupo","message":"Juan te invitó al grupo Amigos","reference_id":5,"inviter_name":"Juan","group_name":"Amigos","is_read":false,"created_at":"2025-01-15T10:30:00Z"}
+
+event: keep-alive
+data: ping
+```
 
 ---
 
@@ -748,85 +754,68 @@ splitmeet-api/
 ├── main.go                          # Punto de entrada
 ├── go.mod                           # Dependencias
 ├── go.sum
+├── schema.sql                       # Script de base de datos
 ├── README.md                        # Este archivo
 │
 ├── internal/
 │   │
 │   ├── core/                        # Configuración central
 │   │   ├── cors.go                  # Configuración CORS
-│   │   └── postgresql.go            # Conexión a BD
+│   │   ├── postgresql.go            # Conexión a BD
+│   │   ├── pagination.go            # Utilidad de paginación
+│   │   ├── sse_hub.go               # Hub SSE para notificaciones
+│   │   └── notification_service.go  # Servicio compartido de notificaciones
 │   │
-│   ├── middleware/                  # Middlewares globales
+│   ├── middleware/                   # Middlewares globales
 │   │   └── auth.go                  # Middleware JWT
 │   │
-│   ├── user/                        # ✅ MÓDULO USER
+│   ├── user/                        # MÓDULO USER
 │   │   ├── app/                     # Casos de uso
 │   │   │   ├── create_user.go
 │   │   │   ├── delete_user.go
 │   │   │   ├── get_by_username.go
+│   │   │   ├── get_pending_invitations.go
 │   │   │   ├── get_profile.go
 │   │   │   ├── get_user.go
 │   │   │   ├── login.go
+│   │   │   ├── search_users.go
 │   │   │   └── update_my_profile.go
-│   │   │
-│   │   ├── domain/                  # Dominio
+│   │   ├── domain/
 │   │   │   ├── entities/
-│   │   │   │   └── user.go
 │   │   │   ├── ports/
-│   │   │   │   ├── bcrypt_port.go
-│   │   │   │   └── token_port.go
 │   │   │   └── repository/
-│   │   │       └── user_repository.go
-│   │   │
-│   │   └── infra/                   # Infraestructura
+│   │   └── infra/
 │   │       ├── dependencies.go
 │   │       ├── adapters/
-│   │       │   ├── bcrypt_adapter.go
-│   │       │   └── jwt_manager.go
 │   │       ├── controllers/
 │   │       ├── repository/
 │   │       ├── routes/
 │   │       └── services/
 │   │
-│   ├── category/                    # 📦 MÓDULO CATEGORY
+│   ├── category/                    # MÓDULO CATEGORY
 │   │   ├── app/
-│   │   │   ├── get_all_categories.go
-│   │   │   └── get_category.go
 │   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── category.go
-│   │   │   └── repository/
-│   │   │       └── category_repository.go
-│   │   └── infra/
-│   │       ├── dependencies.go
-│   │       ├── controllers/
-│   │       ├── repository/
-│   │       └── routes/
-│   │
-│   ├── product/                     # 📦 MÓDULO PRODUCT
-│   │   ├── app/
-│   │   │   ├── get_products_by_category.go
-│   │   │   ├── get_product.go
-│   │   │   ├── search_products.go
-│   │   │   └── create_custom_product.go
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── product.go
-│   │   │   └── repository/
-│   │   │       └── product_repository.go
 │   │   └── infra/
 │   │
-│   ├── group/                       # 📦 MÓDULO GROUP
+│   ├── product/                     # MÓDULO PRODUCT
+│   │   ├── app/
+│   │   ├── domain/
+│   │   └── infra/
+│   │
+│   ├── group/                       # MÓDULO GROUP
 │   │   ├── app/
 │   │   │   ├── create_group.go
-│   │   │   ├── get_group.go
-│   │   │   ├── get_my_groups.go
-│   │   │   ├── update_group.go
 │   │   │   ├── delete_group.go
-│   │   │   ├── invite_member.go
-│   │   │   ├── respond_invitation.go
+│   │   │   ├── get_group.go
 │   │   │   ├── get_members.go
-│   │   │   └── remove_member.go
+│   │   │   ├── get_my_groups.go
+│   │   │   ├── get_pending_invitations.go
+│   │   │   ├── invite_member.go
+│   │   │   ├── remove_member.go
+│   │   │   ├── respond_invitation.go
+│   │   │   ├── set_member_role.go
+│   │   │   ├── transfer_ownership.go
+│   │   │   └── update_group.go
 │   │   ├── domain/
 │   │   │   ├── entities/
 │   │   │   │   ├── group.go
@@ -835,21 +824,12 @@ splitmeet-api/
 │   │   │       └── group_repository.go
 │   │   └── infra/
 │   │
-│   ├── outing/                      # 📦 MÓDULO OUTING
+│   ├── outing/                      # MÓDULO OUTING
 │   │   ├── app/
-│   │   │   ├── create_outing.go
-│   │   │   ├── get_outing.go
-│   │   │   ├── get_my_outings.go
-│   │   │   ├── update_outing.go
-│   │   │   ├── delete_outing.go
-│   │   │   ├── add_participant.go
-│   │   │   ├── confirm_participation.go
-│   │   │   ├── remove_participant.go
-│   │   │   ├── add_item.go
-│   │   │   ├── update_item.go
-│   │   │   ├── remove_item.go
-│   │   │   ├── split_item.go
-│   │   │   └── calculate_splits.go
+│   │   │   ├── create_outing.go     # Auto-invita miembros de grupo
+│   │   │   ├── add_participant.go   # Con notificación SSE
+│   │   │   ├── confirm_participation.go  # Notifica al creador
+│   │   │   └── ...
 │   │   ├── domain/
 │   │   │   ├── entities/
 │   │   │   │   ├── outing.go
@@ -857,24 +837,33 @@ splitmeet-api/
 │   │   │   │   ├── outing_item.go
 │   │   │   │   └── item_split.go
 │   │   │   └── repository/
-│   │   │       └── outing_repository.go
 │   │   └── infra/
 │   │
-│   └── payment/                     # 📦 MÓDULO PAYMENT
+│   ├── payment/                     # MÓDULO PAYMENT
+│   │   ├── app/
+│   │   ├── domain/
+│   │   └── infra/
+│   │
+│   └── notification/                # MÓDULO NOTIFICATION (SSE)
 │       ├── app/
-│       │   ├── get_outing_payments.go
-│       │   ├── register_payment.go
-│       │   ├── confirm_payment.go
-│       │   └── get_my_pending_payments.go
+│       │   ├── get_notifications.go
+│       │   ├── mark_as_read.go
+│       │   └── create_notification.go
 │       ├── domain/
 │       │   ├── entities/
-│       │   │   └── payment.go
+│       │   │   └── notification.go
 │       │   └── repository/
-│       │       └── payment_repository.go
+│       │       └── notification_repository.go
 │       └── infra/
-│
-└── docs/                            # Documentación adicional
-    └── database.sql                 # Script de base de datos
+│           ├── dependencies.go
+│           ├── controllers/
+│           │   ├── get_notifications.go
+│           │   ├── mark_as_read.go
+│           │   └── sse_stream.go
+│           ├── repository/
+│           │   └── notification_postgresql.go
+│           └── routes/
+│               └── notification_router.go
 ```
 
 ---
@@ -883,7 +872,7 @@ splitmeet-api/
 
 ### Prerrequisitos
 
-- Go 1.21 o superior
+- Go 1.25 o superior
 - PostgreSQL 15 o superior
 - Git
 
@@ -900,7 +889,7 @@ go mod download
 # Configurar variables de entorno (ver sección Configuración)
 
 # Ejecutar migraciones de base de datos
-psql -U tu_usuario -d splitmeet -f docs/database.sql
+psql -U tu_usuario -d splitmeet -f schema.sql
 
 # Ejecutar el servidor
 go run main.go
@@ -944,17 +933,18 @@ Todos los módulos están completamente implementados:
 1. ✅ User          (autenticación, perfil, búsqueda, invitaciones)
 2. ✅ Category      (listado de categorías predefinidas)
 3. ✅ Product       (catálogo por categoría)
-4. ✅ Group         (grupos con invitaciones)
-5. ✅ Outing        (salidas, participantes, items, splits)
+4. ✅ Group         (grupos con roles, invitaciones, transferencia)
+5. ✅ Outing        (salidas, auto-invitación, participantes, items, splits)
 6. ✅ Payment       (pagos con validaciones y auto-cancelación)
+7. ✅ Notification   (SSE en tiempo real, marcar leídas, paginación)
 ```
 
 ### Convenciones de Código
 
 - **Naming**: camelCase para variables, PascalCase para tipos exportados
 - **Errores**: Siempre manejar y propagar errores apropiadamente
-- **Comentarios**: Documentar funciones públicas con GoDoc
-- **Tests**: Escribir tests unitarios para casos de uso
+- **Arquitectura**: Hexagonal con capas domain → app → infra
+- **Notificaciones**: Usar `core.NotificationService` para enviar desde cualquier módulo
 
 ### Estructura de un Módulo
 
@@ -970,9 +960,8 @@ type Example struct {
 
 // domain/repository/example_repository.go
 type ExampleRepository interface {
-    Create(ctx context.Context, e *entities.Example) error
-    FindByID(ctx context.Context, id int64) (*entities.Example, error)
-    // ... otros métodos
+    Create(e *entities.Example) error
+    FindByID(id int64) (*entities.Example, error)
 }
 
 // app/create_example.go
@@ -980,7 +969,7 @@ type CreateExampleUseCase struct {
     repo repository.ExampleRepository
 }
 
-func (uc *CreateExampleUseCase) Execute(ctx context.Context, input CreateExampleInput) (*entities.Example, error) {
+func (uc *CreateExampleUseCase) Execute(input CreateExampleInput) (*entities.Example, error) {
     // Lógica de negocio
 }
 ```

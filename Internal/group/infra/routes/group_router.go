@@ -18,6 +18,8 @@ func SetupGroupRoutes(
 	getMembersCtrl *controllers.GetMembersController,
 	removeMemberCtrl *controllers.RemoveMemberController,
 	getPendingInvitationsCtrl *controllers.GetPendingInvitationsController,
+	transferOwnershipCtrl *controllers.TransferOwnershipController,
+	setMemberRoleCtrl *controllers.SetMemberRoleController,
 	jwtSecret string,
 ) {
 	g := r.Group("groups")
@@ -29,6 +31,10 @@ func SetupGroupRoutes(
 		g.GET("/:id", getGroupCtrl.Handle)
 		g.PATCH("/:id", updateGroupCtrl.Handle)
 		g.DELETE("/:id", deleteGroupCtrl.Handle)
+
+		// Ownership & Roles
+		g.PATCH("/:id/transfer", transferOwnershipCtrl.Handle)
+		g.PATCH("/:id/members/:userId/role", setMemberRoleCtrl.Handle)
 
 		// Members
 		g.GET("/:id/members", getMembersCtrl.Handle)

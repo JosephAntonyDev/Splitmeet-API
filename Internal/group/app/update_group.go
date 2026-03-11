@@ -32,9 +32,13 @@ func (uc *UpdateGroup) Execute(input UpdateGroupInput) (*entities.Group, error) 
 		return nil, fmt.Errorf("grupo no encontrado")
 	}
 
-	// Solo el owner puede actualizar el grupo
-	if group.OwnerID != input.UserID {
-		return nil, fmt.Errorf("solo el creador del grupo puede editarlo")
+	// Only owner or admin can update
+	member, err := uc.repo.GetMemberByGroupAndUser(input.GroupID, input.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("error al verificar membresía: %v", err)
+	}
+	if member == nil || (member.Role != entities.MemberRoleOwner && member.Role != entities.MemberRoleAdmin) {
+		return nil, fmt.Errorf("solo el propietario o administradores pueden editar el grupo")
 	}
 
 	if input.Name != "" {

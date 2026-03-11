@@ -46,6 +46,7 @@ func (uc *CreateGroup) Execute(input CreateGroupInput) (*entities.Group, error) 
 	member := &entities.GroupMember{
 		GroupID:   group.ID,
 		UserID:    input.OwnerID,
+		Role:      entities.MemberRoleOwner,
 		Status:    entities.MemberStatusAccepted,
 		InvitedBy: &input.OwnerID,
 		InvitedAt: now,

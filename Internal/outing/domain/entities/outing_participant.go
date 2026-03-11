@@ -14,6 +14,7 @@ type OutingParticipant struct {
 	ID           int64
 	OutingID     int64
 	UserID       int64
+	InvitedBy    *int64
 	Status       ParticipantStatus
 	AmountOwed   float64
 	CustomAmount *float64
