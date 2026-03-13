@@ -1,18 +1,38 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
 // NotificationService provides a shared way for any module to create notifications and push SSE events
 type NotificationService struct {
-	db  *Conn_PostgreSQL
-	hub *SSEHub
+	db         *Conn_PostgreSQL
+	hub        *SSEHub
+	pushSender PushSender
+	tokenStore DeviceTokenStore
 }
 
-func NewNotificationService(db *Conn_PostgreSQL, hub *SSEHub) *NotificationService {
-	return &NotificationService{db: db, hub: hub}
+type PushRequest struct {
+	Token string
+	Title string
+	Body  string
+	Data  map[string]string
+}
+
+type PushSender interface {
+	SendAndroidPush(ctx context.Context, req PushRequest) (bool, error)
+}
+
+type DeviceTokenStore interface {
+	GetActiveDeviceTokensByUserID(userID int64) ([]string, error)
+	DeactivateDeviceToken(token string) error
+}
+
+func NewNotificationService(db *Conn_PostgreSQL, hub *SSEHub, pushSender PushSender, tokenStore DeviceTokenStore) *NotificationService {
+	return &NotificationService{db: db, hub: hub, pushSender: pushSender, tokenStore: tokenStore}
 }
 
 type NotificationPayload struct {
@@ -27,6 +47,10 @@ type NotificationPayload struct {
 }
 
 func (s *NotificationService) Send(payload NotificationPayload) {
+	if s == nil {
+		return
+	}
+
 	var id int64
 	var createdAt time.Time
 
@@ -57,4 +81,35 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 		"response_status": "pending",
 		"created_at":      createdAt,
 	})
+
+	if s.pushSender == nil || s.tokenStore == nil {
+		return
+	}
+
+	tokens, err := s.tokenStore.GetActiveDeviceTokensByUserID(payload.UserID)
+	if err != nil {
+		log.Printf("Error al obtener tokens FCM de usuario %d: %v", payload.UserID, err)
+		return
+	}
+
+	for _, token := range tokens {
+		invalidToken, pushErr := s.pushSender.SendAndroidPush(context.Background(), PushRequest{
+			Token: token,
+			Title: payload.Title,
+			Body:  payload.Message,
+			Data: map[string]string{
+				"type":    payload.Type,
+				"user_id": fmt.Sprintf("%d", payload.UserID),
+			},
+		})
+
+		if pushErr != nil {
+			log.Printf("Error enviando push a usuario %d: %v", payload.UserID, pushErr)
+			if invalidToken {
+				if deactivateErr := s.tokenStore.DeactivateDeviceToken(token); deactivateErr != nil {
+					log.Printf("Error desactivando token inválido: %v", deactivateErr)
+				}
+			}
+		}
+	}
 }

@@ -135,3 +135,56 @@ func (r *NotificationPostgreSQLRepository) GetUnreadCount(userID int64) (int, er
 	}
 	return count, nil
 }
+
+func (r *NotificationPostgreSQLRepository) UpsertDeviceToken(userID int64, token, platform string) error {
+	query := `
+		INSERT INTO user_device_tokens (user_id, token, platform, is_active)
+		VALUES ($1, $2, $3, true)
+		ON CONFLICT (token)
+		DO UPDATE SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, is_active = true, updated_at = CURRENT_TIMESTAMP`
+
+	_, err := r.conn.DB.Exec(query, userID, token, platform)
+	if err != nil {
+		return fmt.Errorf("error al guardar token de dispositivo: %v", err)
+	}
+
+	return nil
+}
+
+func (r *NotificationPostgreSQLRepository) GetActiveDeviceTokensByUserID(userID int64) ([]string, error) {
+	rows, err := r.conn.DB.Query(`
+		SELECT token
+		FROM user_device_tokens
+		WHERE user_id = $1 AND is_active = true`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener tokens activos: %v", err)
+	}
+	defer rows.Close()
+
+	tokens := make([]string, 0)
+	for rows.Next() {
+		var token string
+		if scanErr := rows.Scan(&token); scanErr != nil {
+			return nil, fmt.Errorf("error al leer token: %v", scanErr)
+		}
+		tokens = append(tokens, token)
+	}
+
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("error al iterar tokens: %v", rowsErr)
+	}
+
+	return tokens, nil
+}
+
+func (r *NotificationPostgreSQLRepository) DeactivateDeviceToken(token string) error {
+	_, err := r.conn.DB.Exec(`
+		UPDATE user_device_tokens
+		SET is_active = false, updated_at = CURRENT_TIMESTAMP
+		WHERE token = $1`, token)
+	if err != nil {
+		return fmt.Errorf("error al desactivar token: %v", err)
+	}
+
+	return nil
+}

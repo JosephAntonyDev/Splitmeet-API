@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/JosephAntonyDev/splitmeet-api/internal/core"
 	groupInfra "github.com/JosephAntonyDev/splitmeet-api/internal/group/infra"
 	notificationInfra "github.com/JosephAntonyDev/splitmeet-api/internal/notification/infra"
+	notificationAdapters "github.com/JosephAntonyDev/splitmeet-api/internal/notification/infra/adapters"
+	notificationRepository "github.com/JosephAntonyDev/splitmeet-api/internal/notification/infra/repository"
 	outingInfra "github.com/JosephAntonyDev/splitmeet-api/internal/outing/infra"
 	paymentInfra "github.com/JosephAntonyDev/splitmeet-api/internal/payment/infra"
 	productInfra "github.com/JosephAntonyDev/splitmeet-api/internal/product/infra"
@@ -31,7 +34,17 @@ func main() {
 
 	// SSE Hub y Notification Service
 	sseHub := core.NewSSEHub()
-	notifSvc := core.NewNotificationService(dbPool, sseHub)
+	notifRepo := notificationRepository.NewNotificationPostgreSQLRepository(dbPool)
+
+	var pushSender core.PushSender
+	firebaseSender, firebaseErr := notificationAdapters.NewFirebasePushSender(context.Background())
+	if firebaseErr != nil {
+		log.Printf("FCM deshabilitado: %v", firebaseErr)
+	} else {
+		pushSender = firebaseSender
+	}
+
+	notifSvc := core.NewNotificationService(dbPool, sseHub, pushSender, notifRepo)
 
 	r := gin.Default()
 

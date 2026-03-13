@@ -15,6 +15,7 @@
 .env
 .env.local
 *.env
+splitmeet-76e30-firebase-adminsdk-fbsvc-88326aeffc.json
 
 # IDEs y Editores
 .idea/

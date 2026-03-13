@@ -19,15 +19,17 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, hub *core.SS
 	getNotificationsUC := app.NewGetNotifications(notifRepo)
 	markAsReadUC := app.NewMarkAsRead(notifRepo)
 	markAllAsReadUC := app.NewMarkAllAsRead(notifRepo)
+	registerDeviceTokenUC := app.NewRegisterDeviceToken(notifRepo)
 
 	// Controllers
 	getNotificationsCtrl := controllers.NewGetNotificationsController(getNotificationsUC)
 	markAsReadCtrl := controllers.NewMarkAsReadController(markAsReadUC, markAllAsReadUC)
 	sseStreamCtrl := controllers.NewSSEStreamController(hub)
+	registerDeviceTokenCtrl := controllers.NewRegisterDeviceTokenController(registerDeviceTokenUC)
 
 	// JWT Secret
 	jwtSecret := os.Getenv("JWT_SECRET")
 
 	// Routes
-	routes.SetupNotificationRoutes(r, getNotificationsCtrl, markAsReadCtrl, sseStreamCtrl, jwtSecret)
+	routes.SetupNotificationRoutes(r, getNotificationsCtrl, markAsReadCtrl, sseStreamCtrl, registerDeviceTokenCtrl, jwtSecret)
 }

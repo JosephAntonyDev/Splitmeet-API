@@ -11,6 +11,7 @@ func SetupNotificationRoutes(
 	getNotificationsCtrl *controllers.GetNotificationsController,
 	markAsReadCtrl *controllers.MarkAsReadController,
 	sseStreamCtrl *controllers.SSEStreamController,
+	registerDeviceTokenCtrl *controllers.RegisterDeviceTokenController,
 	jwtSecret string,
 ) {
 	g := r.Group("notifications")
@@ -18,6 +19,7 @@ func SetupNotificationRoutes(
 	{
 		g.GET("", getNotificationsCtrl.Handle)
 		g.GET("/stream", sseStreamCtrl.Handle)
+		g.POST("/device-token", registerDeviceTokenCtrl.Handle)
 		g.PATCH("/:id/read", markAsReadCtrl.HandleOne)
 		g.PATCH("/read-all", markAsReadCtrl.HandleAll)
 	}
