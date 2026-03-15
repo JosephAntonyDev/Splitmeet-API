@@ -14,6 +14,7 @@ type PaymentRepository interface {
 	GetByOutingID(outingID int64) ([]entities.PaymentWithDetails, error)
 	GetByParticipantID(participantID int64) ([]entities.PaymentWithDetails, error)
 	GetPendingByOutingID(outingID int64) ([]entities.PaymentWithDetails, error)
+	GetPendingByOutingAndParticipant(outingID, participantID int64) (*entities.Payment, error)
 
 	// Summary
 	GetSummaryByOutingID(outingID int64) (*entities.PaymentSummary, error)

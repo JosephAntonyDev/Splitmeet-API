@@ -32,6 +32,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 	getParticipantsUC := app.NewGetParticipantsUseCase(outingRepo)
 	confirmParticipationUC := app.NewConfirmParticipationUseCase(outingRepo, userRepo, notifSvc)
 	removeParticipantUC := app.NewRemoveParticipantUseCase(outingRepo)
+	joinOutingUC := app.NewJoinOutingUseCase(outingRepo)
 
 	// Use Cases - Items
 	addItemUC := app.NewAddItemUseCase(outingRepo)
@@ -57,6 +58,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 	getParticipantsCtrl := controllers.NewGetParticipantsController(getParticipantsUC)
 	confirmParticipationCtrl := controllers.NewConfirmParticipationController(confirmParticipationUC)
 	removeParticipantCtrl := controllers.NewRemoveParticipantController(removeParticipantUC)
+	joinOutingCtrl := controllers.NewJoinOutingController(joinOutingUC)
 
 	// Controllers - Items
 	addItemCtrl := controllers.NewAddItemController(addItemUC)
@@ -85,6 +87,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 		getParticipantsCtrl,
 		confirmParticipationCtrl,
 		removeParticipantCtrl,
+		joinOutingCtrl,
 		addItemCtrl,
 		getItemsCtrl,
 		updateItemCtrl,

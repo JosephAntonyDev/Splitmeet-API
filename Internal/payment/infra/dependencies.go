@@ -20,6 +20,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getPaymentUC := app.NewGetPaymentUseCase(paymentRepo)
 	getPaymentsByOutingUC := app.NewGetPaymentsByOutingUseCase(paymentRepo)
 	confirmPaymentUC := app.NewConfirmPaymentUseCase(paymentRepo)
+	confirmParticipantPaymentUC := app.NewConfirmParticipantPaymentUseCase(paymentRepo)
 	deletePaymentUC := app.NewDeletePaymentUseCase(paymentRepo)
 	getPaymentSummaryUC := app.NewGetPaymentSummaryUseCase(paymentRepo)
 
@@ -28,6 +29,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 	getPaymentCtrl := controllers.NewGetPaymentController(getPaymentUC)
 	getPaymentsByOutingCtrl := controllers.NewGetPaymentsByOutingController(getPaymentsByOutingUC)
 	confirmPaymentCtrl := controllers.NewConfirmPaymentController(confirmPaymentUC)
+	confirmParticipantPaymentCtrl := controllers.NewConfirmParticipantPaymentController(confirmParticipantPaymentUC)
 	deletePaymentCtrl := controllers.NewDeletePaymentController(deletePaymentUC)
 	getPaymentSummaryCtrl := controllers.NewGetPaymentSummaryController(getPaymentSummaryUC)
 
@@ -41,6 +43,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL) {
 		getPaymentCtrl,
 		getPaymentsByOutingCtrl,
 		confirmPaymentCtrl,
+		confirmParticipantPaymentCtrl,
 		deletePaymentCtrl,
 		getPaymentSummaryCtrl,
 		jwtSecret,

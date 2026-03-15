@@ -12,6 +12,7 @@ func SetupPaymentRoutes(
 	getPaymentCtrl *controllers.GetPaymentController,
 	getPaymentsByOutingCtrl *controllers.GetPaymentsByOutingController,
 	confirmPaymentCtrl *controllers.ConfirmPaymentController,
+	confirmParticipantPaymentCtrl *controllers.ConfirmParticipantPaymentController,
 	deletePaymentCtrl *controllers.DeletePaymentController,
 	getPaymentSummaryCtrl *controllers.GetPaymentSummaryController,
 	jwtSecret string,
@@ -25,6 +26,7 @@ func SetupPaymentRoutes(
 		payments.GET("/outing/:outingId/summary", getPaymentSummaryCtrl.Handle)
 		payments.GET("/:id", getPaymentCtrl.Handle)
 		payments.PATCH("/:id/confirm", confirmPaymentCtrl.Handle)
+		payments.PATCH("/outings/:outing_id/participants/:participant_id/confirm", confirmParticipantPaymentCtrl.Handle)
 		payments.DELETE("/:id", deletePaymentCtrl.Handle)
 	}
 }

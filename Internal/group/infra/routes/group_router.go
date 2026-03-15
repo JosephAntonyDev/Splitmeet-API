@@ -20,6 +20,7 @@ func SetupGroupRoutes(
 	getPendingInvitationsCtrl *controllers.GetPendingInvitationsController,
 	transferOwnershipCtrl *controllers.TransferOwnershipController,
 	setMemberRoleCtrl *controllers.SetMemberRoleController,
+	joinGroupCtrl *controllers.JoinGroupController,
 	jwtSecret string,
 ) {
 	g := r.Group("groups")
@@ -37,6 +38,7 @@ func SetupGroupRoutes(
 		g.PATCH("/:id/members/:userId/role", setMemberRoleCtrl.Handle)
 
 		// Members
+		g.POST("/:id/join", joinGroupCtrl.Handle)
 		g.GET("/:id/members", getMembersCtrl.Handle)
 		g.POST("/:id/invite", inviteMemberCtrl.Handle)
 		g.PATCH("/:id/invitation", respondInvitationCtrl.Handle)

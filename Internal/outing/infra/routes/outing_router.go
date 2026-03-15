@@ -18,6 +18,7 @@ func SetupOutingRoutes(
 	getParticipantsCtrl *controllers.GetParticipantsController,
 	confirmParticipationCtrl *controllers.ConfirmParticipationController,
 	removeParticipantCtrl *controllers.RemoveParticipantController,
+	joinOutingCtrl *controllers.JoinOutingController,
 	addItemCtrl *controllers.AddItemController,
 	getItemsCtrl *controllers.GetItemsController,
 	updateItemCtrl *controllers.UpdateItemController,
@@ -39,6 +40,7 @@ func SetupOutingRoutes(
 		outings.DELETE("/:id", deleteOutingCtrl.Handle)
 
 		// Participants
+		outings.POST("/:id/join", joinOutingCtrl.Handle)
 		outings.POST("/:id/participants", addParticipantCtrl.Handle)
 		outings.GET("/:id/participants", getParticipantsCtrl.Handle)
 		outings.PATCH("/:id/participants/confirm", confirmParticipationCtrl.Handle)

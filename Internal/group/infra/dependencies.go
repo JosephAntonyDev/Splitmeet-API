@@ -30,6 +30,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 	getPendingInvitationsUseCase := app.NewGetPendingInvitations(groupRepo)
 	transferOwnershipUseCase := app.NewTransferOwnership(groupRepo)
 	setMemberRoleUseCase := app.NewSetMemberRole(groupRepo)
+	joinGroupUseCase := app.NewJoinGroupUseCase(groupRepo)
 
 	// Controllers
 	createGroupController := controllers.NewCreateGroupController(createGroupUseCase)
@@ -44,6 +45,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 	getPendingInvitationsController := controllers.NewGetPendingInvitationsController(getPendingInvitationsUseCase)
 	transferOwnershipController := controllers.NewTransferOwnershipController(transferOwnershipUseCase)
 	setMemberRoleController := controllers.NewSetMemberRoleController(setMemberRoleUseCase)
+	joinGroupController := controllers.NewJoinGroupController(joinGroupUseCase)
 
 	// JWT Secret
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -63,6 +65,7 @@ func SetupDependencies(r *gin.Engine, dbPool *core.Conn_PostgreSQL, notifSvc *co
 		getPendingInvitationsController,
 		transferOwnershipController,
 		setMemberRoleController,
+		joinGroupController,
 		jwtSecret,
 	)
 }

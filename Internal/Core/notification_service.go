@@ -83,6 +83,7 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 	})
 
 	if s.pushSender == nil || s.tokenStore == nil {
+		log.Printf("⚠️ FCM push saltado para usuario %d: pushSender=%v, tokenStore=%v", payload.UserID, s.pushSender != nil, s.tokenStore != nil)
 		return
 	}
 
@@ -91,6 +92,13 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 		log.Printf("Error al obtener tokens FCM de usuario %d: %v", payload.UserID, err)
 		return
 	}
+
+	if len(tokens) == 0 {
+		log.Printf("⚠️ Usuario %d no tiene tokens FCM activos — no se envía push", payload.UserID)
+		return
+	}
+
+	log.Printf("📱 Enviando FCM push a usuario %d (%d tokens)", payload.UserID, len(tokens))
 
 	for _, token := range tokens {
 		invalidToken, pushErr := s.pushSender.SendAndroidPush(context.Background(), PushRequest{
@@ -104,12 +112,14 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 		})
 
 		if pushErr != nil {
-			log.Printf("Error enviando push a usuario %d: %v", payload.UserID, pushErr)
+			log.Printf("❌ Error enviando push a usuario %d: %v", payload.UserID, pushErr)
 			if invalidToken {
 				if deactivateErr := s.tokenStore.DeactivateDeviceToken(token); deactivateErr != nil {
 					log.Printf("Error desactivando token inválido: %v", deactivateErr)
 				}
 			}
+		} else {
+			log.Printf("✅ Push FCM enviado exitosamente a usuario %d", payload.UserID)
 		}
 	}
 }

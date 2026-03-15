@@ -175,6 +175,38 @@ func (r *PaymentPostgresql) GetPendingByOutingID(outingID int64) ([]entities.Pay
 	return r.queryPaymentsWithDetails(query, outingID)
 }
 
+func (r *PaymentPostgresql) GetPendingByOutingAndParticipant(outingID, participantID int64) (*entities.Payment, error) {
+	query := `
+		SELECT id, outing_id, participant_id, amount, status, paid_at, confirmed_by, notes, created_at, updated_at
+		FROM payments
+		WHERE outing_id = $1 AND participant_id = $2 AND status = 'pending'
+		ORDER BY created_at ASC
+		LIMIT 1`
+
+	payment := &entities.Payment{}
+	err := r.db.QueryRow(query, outingID, participantID).Scan(
+		&payment.ID,
+		&payment.OutingID,
+		&payment.ParticipantID,
+		&payment.Amount,
+		&payment.Status,
+		&payment.PaidAt,
+		&payment.ConfirmedBy,
+		&payment.Notes,
+		&payment.CreatedAt,
+		&payment.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, errors.New("no pending payment found for this participant in this outing")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return payment, nil
+}
+
 func (r *PaymentPostgresql) queryPaymentsWithDetails(query string, arg interface{}) ([]entities.PaymentWithDetails, error) {
 	rows, err := r.db.Query(query, arg)
 	if err != nil {
