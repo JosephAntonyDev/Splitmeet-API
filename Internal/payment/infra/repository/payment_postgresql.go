@@ -305,6 +305,23 @@ func (r *PaymentPostgresql) GetTotalConfirmedPayments(outingID int64) (float64, 
 	return total, err
 }
 
+func (r *PaymentPostgresql) GetParticipantAmountOwed(outingID, participantID int64) (float64, error) {
+	query := `SELECT COALESCE(amount_owed, 0) FROM outing_participants WHERE outing_id = $1 AND id = $2`
+	var amount float64
+	err := r.db.QueryRow(query, outingID, participantID).Scan(&amount)
+	if err == sql.ErrNoRows {
+		return 0, errors.New("participant not found in outing")
+	}
+	return amount, err
+}
+
+func (r *PaymentPostgresql) GetConfirmedParticipantCount(outingID int64) (int, error) {
+	query := `SELECT COUNT(*) FROM outing_participants WHERE outing_id = $1 AND status = 'confirmed'`
+	var count int
+	err := r.db.QueryRow(query, outingID).Scan(&count)
+	return count, err
+}
+
 func (r *PaymentPostgresql) CancelPendingPayments(outingID int64) error {
 	query := `UPDATE payments SET status = 'cancelled', updated_at = NOW() WHERE outing_id = $1 AND status = 'pending'`
 	_, err := r.db.Exec(query, outingID)
