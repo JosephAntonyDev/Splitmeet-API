@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+
 type ConfirmParticipantPaymentController struct {
 	useCase *app.ConfirmParticipantPaymentUseCase
 }
@@ -33,15 +34,15 @@ func (c *ConfirmParticipantPaymentController) Handle(ctx *gin.Context) {
 	}
 
 	// Get authenticated user (who confirms the payment)
-	userIDStr, exists := ctx.Get("userID")
+	userIDRaw, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	confirmedByUserID, err := strconv.ParseInt(userIDStr.(string), 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
+	confirmedByUserID, ok := userIDRaw.(int64)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID type"})
 		return
 	}
 

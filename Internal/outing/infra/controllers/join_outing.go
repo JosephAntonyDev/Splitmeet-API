@@ -26,15 +26,15 @@ func (c *JoinOutingController) Handle(ctx *gin.Context) {
 	}
 
 	// Get authenticated user ID
-	userIDStr, exists := ctx.Get("userID")
+	userIDRaw, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	userID, err := strconv.ParseInt(userIDStr.(string), 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
+	userID, ok := userIDRaw.(int64)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID type"})
 		return
 	}
 
